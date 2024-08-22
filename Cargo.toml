@@ -1,0 +1,11 @@
+[package]
+name = "rustylox"
+version = "0.1.0"
+authors = ["Jakub Muszynski <mvishiu11>"]
+edition = "2021"
+
+
+[dependencies]
+anyhow = "1.0.68"                                # error handling
+bytes = "1.3.0"                                  # helps manage buffers
+thiserror = "1.0.38"                             # error handling
