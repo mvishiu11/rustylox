@@ -18,6 +18,60 @@ Here’s how it works:
 2. **Processing**: The lexer reads through the string, character by character, and transforms it into a series of tokens. These tokens are categorized by their type (keywords, identifiers, literals, etc.).
 3. **Output**: The result is a neat, tidy list of tokens that make the rest of the interpretation process feel like a walk in the park.
 
+**Example**
+
+For input such as this *test.lox* file:
+
+```javascript
+var greeting = "Hello, world!";
+print greeting;
+if (greeting != "Hello, world!") {
+    print "Something went wrong.";
+} else {
+    print "All good!";
+}
+```
+
+We run the following command:
+
+```bash
+./rustylox.sh tokenize "test.lox"
+```
+
+And get the output:
+
+```bash
+✨ Program logs will be displayed here. Stay tuned!
+Token { token_type: Var, lexeme: "var", line: 1 }
+Token { token_type: Identifier, lexeme: "greeting", line: 1 }
+Token { token_type: Equal, lexeme: "=", line: 1 }
+Token { token_type: String, lexeme: "\"Hello, world!\"", line: 1 }
+Token { token_type: Semicolon, lexeme: ";", line: 1 }
+Token { token_type: Print, lexeme: "print", line: 2 }
+Token { token_type: Identifier, lexeme: "greeting", line: 2 }
+Token { token_type: Semicolon, lexeme: ";", line: 2 }
+Token { token_type: If, lexeme: "if", line: 3 }
+Token { token_type: LeftParen, lexeme: "(", line: 3 }
+Token { token_type: Identifier, lexeme: "greeting", line: 3 }
+Token { token_type: BangEqual, lexeme: "!=", line: 3 }
+Token { token_type: String, lexeme: "\"Hello, world!\"", line: 3 }
+Token { token_type: RightParen, lexeme: ")", line: 3 }
+Token { token_type: LeftBrace, lexeme: "{", line: 3 }
+Token { token_type: Print, lexeme: "print", line: 4 }
+Token { token_type: String, lexeme: "\"Something went wrong.\"", line: 4 }
+Token { token_type: Semicolon, lexeme: ";", line: 4 }
+Token { token_type: RightBrace, lexeme: "}", line: 5 }
+Token { token_type: Else, lexeme: "else", line: 5 }
+Token { token_type: LeftBrace, lexeme: "{", line: 5 }
+Token { token_type: Print, lexeme: "print", line: 6 }
+Token { token_type: String, lexeme: "\"All good!\"", line: 6 }
+Token { token_type: Semicolon, lexeme: ";", line: 6 }
+Token { token_type: RightBrace, lexeme: "}", line: 7 }
+Token { token_type: Eof, lexeme: "", line: 7 }
+```
+
+As you can see it works great!
+
 ### 💡 **Why This Approach?**
 - **Rust’s Safety Guarantees**: Memory safety, without the need for a garbage collector. Our lexer is practically bulletproof.
 - **Performance**: Rust gives us speed, which means our Lox interpreter can run faster than a caffeinated squirrel.
