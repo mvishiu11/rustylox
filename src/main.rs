@@ -1,3 +1,7 @@
+mod lexer;
+mod token;
+
+use lexer::Lexer;
 use std::env;
 use std::fs;
 use std::io::{self, Write};
@@ -14,7 +18,7 @@ fn main() {
 
     match command.as_str() {
         "tokenize" => {
-            writeln!(io::stderr(), "Logs from your program will appear here!").unwrap();
+            writeln!(io::stderr(), "✨ Program logs will be displayed here. Stay tuned!").unwrap();
 
             let file_contents = fs::read_to_string(filename).unwrap_or_else(|_| {
                 writeln!(io::stderr(), "Failed to read file {}", filename).unwrap();
@@ -22,7 +26,11 @@ fn main() {
             });
 
             if !file_contents.is_empty() {
-                panic!("Scanner not implemented");
+                let mut lexer = Lexer::new(file_contents);
+                let tokens = lexer.tokenize();
+                for token in tokens {
+                    println!("{:?}", token);
+                }
             } else {
                 println!("EOF  null");
             }
