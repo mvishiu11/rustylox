@@ -1,4 +1,7 @@
-LEFT_PAREN ( null
-LEFT_PAREN ( null
-RIGHT_PAREN ) null
-EOF  null
+var greeting = "Hello, world!";
+print greeting;
+if (greeting != "Hello, world!") {
+    print "Something went wrong.";
+} else {
+    print "All good!";
+}
