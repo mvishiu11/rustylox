@@ -1,7 +1,12 @@
 mod lexer;
 mod token;
+mod expr;
+mod parser;
+mod error;
 
 use lexer::Lexer;
+use expr::{Expr, BinaryExpr, UnaryExpr, LiteralExpr};
+use token::{Token, TokenType};
 use std::env;
 use std::fs;
 use std::io::{self, Write};
@@ -18,7 +23,7 @@ fn main() {
 
     match command.as_str() {
         "tokenize" => {
-            writeln!(io::stderr(), "✨ Program logs will be displayed here. Stay tuned!").unwrap();
+            writeln!(io::stdout(), "✨ Program logs will be displayed here. Stay tuned!").unwrap();
 
             let file_contents = fs::read_to_string(filename).unwrap_or_else(|_| {
                 writeln!(io::stderr(), "Failed to read file {}", filename).unwrap();
@@ -30,6 +35,26 @@ fn main() {
                 let tokens = lexer.tokenize();
                 for token in tokens {
                     println!("{:?}", token);
+                }
+            } else {
+                println!("EOF  null");
+            }
+        }
+        "parse" => {
+            writeln!(io::stdout(), "✨ Program logs will be displayed here. Stay tuned!").unwrap();
+
+            let file_contents = fs::read_to_string(filename).unwrap_or_else(|_| {
+                writeln!(io::stderr(), "Failed to read file {}", filename).unwrap();
+                String::new()
+            });
+
+            if !file_contents.is_empty() {
+                let mut lexer = Lexer::new(file_contents);
+                let tokens = lexer.tokenize();
+                let mut parser = parser::Parser::new(tokens.to_vec());
+                match parser.parse() {
+                    Ok(expr) => println!("{}", expr.pretty_print()),
+                    Err(e) => writeln!(io::stderr(), "{}", e).unwrap(),
                 }
             } else {
                 println!("EOF  null");
