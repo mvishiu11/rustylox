@@ -1,18 +1,33 @@
-# OxidizedLox: A Rusty Take on Lox Interpretation
+# RustyLox: A Rusty Take on Lox Interpretation
 
-Welcome to **OxidizedLox**, where the beauty of Lox meets the rugged charm of Rust. This is not just another interpreter—this is *the* interpreter, finely crafted with the precision of a blacksmith and the elegance of a cat. Whether you're here to learn, contribute, or just gawk at the code, you’re in for a treat.
+Welcome to **RustyLox**, where the beauty of Lox meets the rugged charm of Rust. This is not just another interpreter—this is *the* interpreter, finely crafted with the precision of a blacksmith and the elegance of a cat. Whether you're here to learn, contribute, or just gawk at the code, you’re in for a treat.
 
 ## 📜 **Project Overview**
 
-**OxidizedLox** is a Lox interpreter implemented in Rust, taking inspiration from Robert Nystrom’s *Crafting Interpreters*. In this journey, we’ve set out to create a Lox interpreter that’s both lightning-fast and a little bit cheeky. Think of it as Lox with a rust-colored patina.
+**RustyLox** is a Lox interpreter implemented in Rust, inspired by Robert Nystrom’s *Crafting Interpreters*. Our goal is to create a Lox interpreter that's both lightning-fast and a little bit cheeky. Think of it as Lox with a rust-colored patina.
 
-But why Rust, you ask? Well, because Rust gives us the performance and safety we crave while making us feel like we’re living dangerously. It’s like riding a motorcycle with a helmet on—thrilling, yet secure.
+Why Rust, you ask? Rust provides performance and safety, giving us the thrill of low-level programming while ensuring memory safety. It's like riding a motorcycle with a helmet on—thrilling, yet secure.
 
-### 🛠 **Lexing: The First Step in Our Grand Adventure**
+## 📑 **Table of Contents**
 
-Ah, lexing, the art of turning a stream of characters into a manageable array of tokens. It’s the first step in our journey from raw Lox code to beautiful execution. Here in OxidizedLox, the lexer is more than just a glorified word counter. It’s a sophisticated, high-class tokenizer with a penchant for elegance.
+- [📜 Project Overview](#-project-overview)
+- [🛠 Lexing: The First Step in Our Grand Adventure](#-lexing-the-first-step-in-our-grand-adventure)
+  - [How it works?](#how-it-works)
+  - [Technical Details](#technical-details)
+- [🛠 Parsing: Turning Tokens into Meaningful Expressions](#-parsing-turning-tokens-into-meaningful-expressions)
+  - [How it works?](#how-it-works-1)
+  - [Technical Details](#technical-details-1)
+- [🚀 Current Features](#-current-features)
+- [🛣 Future Plans](#-future-plans)
+- [🤓 Getting Started](#-getting-started)
+- [🤝 Contributing](#-contributing)
+- [🎩 Final Thoughts](#-final-thoughts)
 
-Here’s how it works:
+## 🛠 **Lexing: The First Step in Our Grand Adventure**
+
+Ah, lexing, the art of turning a stream of characters into a manageable array of tokens. It’s the first step in our journey from raw Lox code to beautiful execution. Here in RustyLox, the lexer is more than just a glorified word counter. It’s a sophisticated, high-class tokenizer with a penchant for elegance.
+
+### How It Works
 
 1. **Input**: You feed it a string of Lox code. It could be Shakespearean, minimalist, or a train wreck of syntax. The lexer doesn’t judge (much).
 2. **Processing**: The lexer reads through the string, character by character, and transforms it into a series of tokens. These tokens are categorized by their type (keywords, identifiers, literals, etc.).
@@ -22,7 +37,7 @@ Here’s how it works:
 
 For input such as this *test.lox* file:
 
-```javascript
+```js
 var greeting = "Hello, world!";
 print greeting;
 if (greeting != "Hello, world!") {
@@ -35,13 +50,12 @@ if (greeting != "Hello, world!") {
 We run the following command:
 
 ```bash
-./rustylox.sh tokenize "test.lox"
+./rustylox.sh tokenize "example/test_tokenize.lox"
 ```
 
 And get the output:
 
 ```bash
-✨ Program logs will be displayed here. Stay tuned!
 Token { token_type: Var, lexeme: "var", line: 1 }
 Token { token_type: Identifier, lexeme: "greeting", line: 1 }
 Token { token_type: Equal, lexeme: "=", line: 1 }
@@ -70,55 +84,131 @@ Token { token_type: RightBrace, lexeme: "}", line: 7 }
 Token { token_type: Eof, lexeme: "", line: 7 }
 ```
 
-As you can see it works great!
+As you can see, it works great!
 
-### 💡 **Why This Approach?**
-- **Rust’s Safety Guarantees**: Memory safety, without the need for a garbage collector. Our lexer is practically bulletproof.
-- **Performance**: Rust gives us speed, which means our Lox interpreter can run faster than a caffeinated squirrel.
-- **Simplicity**: The lexer is built with simplicity in mind. We like to think of it as the Swiss Army knife of tokenizers—compact but capable.
+### Technical Details
+
+#### **Lexer Implementation**
+
+- **Deterministic Finite Automaton with 1-Lookahead (DFA-1)**: Our lexer employs a Deterministic Finite Automaton (DFA) enhanced with a single-character lookahead capability. This sophisticated mechanism enables precise and efficient token classification by examining the upcoming character to resolve ambiguities in token boundaries and types. The DFA-1 framework ensures that the lexer can handle the regular patterns present in the Lox language with optimal performance, leveraging its deterministic nature to guarantee linear time complexity in tokenization.
+
+- **Regular Language Processing**: The Lox language is defined as a regular language within the lexical domain. This classification facilitates the application of FSM-based techniques, allowing the lexer to operate with exceptional efficiency and accuracy. The regularity of Lox's lexical structure ensures that our DFA-1 approach is both theoretically sound and practically effective in managing token streams.
+
+**Further Reading**
+
+- [Deterministic Finite Automaton](https://en.wikipedia.org/wiki/Deterministic_finite_automaton): A comprehensive overview of deterministic finite automata and their role in formal language theory.
+- [Finite State Machines](https://en.wikipedia.org/wiki/Finite-state_machine): An introduction to finite state machines, their properties, and applications.
+- [Tokenization](https://en.wikipedia.org/wiki/Lexical_analysis): A detailed discussion on lexical analysis and the process of tokenization in programming languages.
+
+## 🛠 **Parsing: Turning Tokens into Meaningful Expressions**
+
+Welcome to the world of parsing, where we turn our neatly categorized tokens into structured, meaningful expressions. In RustyLox, parsing transforms tokens into an Abstract Syntax Tree (AST), a hierarchical representation of your code that reflects its syntactic structure.
+
+### How It Works
+
+1. **Input**: We start with a sequence of tokens produced by the lexer.
+2. **Processing**: The parser applies grammatical rules to these tokens to construct an AST. This involves handling expressions, statements, and control flow constructs.
+3. **Output**: The result is an AST that represents the structure of the code, enabling further stages of interpretation or compilation.
+
+**Example**
+
+For the simpler *test.lox* file (since for now we only support parsing arithmetic):
+
+```js
+// Simple arithmetic
+10 + 2 * (3 - 1);
+```
+
+We run:
+
+```bash
+./rustylox.sh parse "example/test_parse_arithmetic.lox"
+```
+
+The parser would produce an AST like:
+
+```
+BinaryExpression (Plus)
+├──   Number (10)
+└──   BinaryExpression (Star)
+  ├──     Number (2)
+  └──     Grouping
+    └──       BinaryExpression (Minus)
+      ├──         Number (3)
+      └──         Number (1)
+```
+
+### Technical Details
+
+#### **Parser Implementation**
+
+- **Recursive Descent Parsing with Context-Free Grammar**: The Lox language is modeled as a context-free language, which aligns perfectly with recursive descent parsing techniques. This parsing strategy utilizes a collection of mutually recursive functions, each designed to recognize and process different non-terminals defined by the language's grammar. The recursive descent parser systematically traverses the input token stream to construct a syntax tree, reflecting the nested and hierarchical structure of Lox expressions and statements. This approach provides a straightforward yet powerful mechanism for syntax analysis, enabling the parser to effectively handle the complex constructs inherent in context-free grammars.
+
+- **Advanced Error Handling**: Our parser incorporates advanced error handling mechanisms that significantly enhance its robustness and user-friendliness. By employing comprehensive error recovery techniques and providing detailed error messages, the parser ensures that syntax errors are reported with contextually relevant information, facilitating easier debugging and correction. The error handling framework gracefully manages unexpected tokens and invalid syntax, maintaining parser stability and delivering a seamless development experience.
+
+**Further Reading**
+
+- [Recursive Descent Parsing](https://en.wikipedia.org/wiki/Recursive_descent_parser): An in-depth exploration of recursive descent parsing techniques and their application in language processing.
+- [Abstract Syntax Trees](https://en.wikipedia.org/wiki/Abstract_syntax_tree): A detailed explanation of abstract syntax trees and their role in representing hierarchical language structures.
+- [Context-Free Grammars](https://en.wikipedia.org/wiki/Context-free_grammar): An overview of context-free grammars, their theoretical foundations, and their significance in formal language theory.
 
 ## 🚀 **Current Features**
 
-- **Tokenization**: Our lexer can currently handle the full Lox language, including:
-  - Keywords (`if`, `else`, `for`, etc.)
-  - Operators (`+`, `-`, `*`, `/`, `==`, etc.)
-  - Delimiters (`(`, `)`, `{`, `}`, `;`, etc.)
-  - Literals (Strings, Numbers)
-  - Identifiers (Variable and function names)
-- **Error Handling**: The lexer will politely inform you of any unexpected characters it encounters, with a healthy dose of sarcasm, of course.
-- **EOF Handling**: We’re so thorough, we even know when the file ends.
+- **Tokenization**: Efficiently processes the Lox language, covering:
+  - **Keywords**: Recognizes reserved words such as `if`, `else`, `for`, `while`, `class`, `return`, and others.
+  - **Operators**: Identifies arithmetic operators (`+`, `-`, `*`, `/`), relational operators (`==`, `!=`, `<`, `>`, `<=`, `>=`), logical operators (`and`, `or`), and assignment operators (`=`, `+=`, `-=`).
+  - **Delimiters**: Handles punctuation and delimiters including parentheses (`(`, `)`), braces (`{`, `}`), brackets (`[`, `]`), commas (`,`), and semicolons (`;`).
+  - **Literals**: Supports string literals, numeric literals (integers and floating-point numbers), and boolean literals (`true`, `false`).
+  - **Identifiers**: Detects and tokenizes variable names, function names, and other user-defined identifiers.
+
+- **Parsing**: Capable of interpreting the Lox language syntax, including:
+  - **Basic Arithmetic**: Parses expressions involving addition (`+`), subtraction (`-`), multiplication (`*`), and division (`/`), and supports proper precedence and associativity rules.
+  - **Parenthesized Expressions**: Handles nested expressions within parentheses, ensuring correct order of operations.
+  - **Unary Operations**: Interprets unary operators such as negation (`-`) and logical not (`!`).
+  - **Binary Operations**: Supports binary operations with appropriate precedence levels.
+  - **Grouping**: Recognizes and correctly processes expressions grouped within parentheses for clarity and precedence.
+  - **Assignment Statements**: Parses assignment operations to variables, including compound assignments like `+=` and `-=`.
+
+- **Error Handling**: Features robust error reporting with a touch of humor, providing clear and contextually relevant messages for unexpected characters, invalid syntax, and other anomalies. Includes mechanisms for graceful recovery and informative feedback.
+
+- **EOF Handling**: Accurately detects and manages the end-of-file condition, ensuring that tokenization and parsing are correctly terminated and that no residual tokens are left unprocessed.
+
+- **User-Friendly Debugging**: Offers detailed diagnostic information for developers, including line numbers and token details, to facilitate efficient debugging and development.
+
+- **Interactive Feedback**: Provides real-time feedback during development, allowing users to see immediate results and identify issues as they arise.
 
 ## 🛣 **Future Plans**
 
 Here’s where we’re headed next:
 
-1. **Parsing**: Turning our tokens into an Abstract Syntax Tree (AST). Yes, the lexer was just the appetizer.
-2. **Interpretation**: Actually running the code. Because what's the point of all this if it doesn’t do anything?
-3. **REPL Support**: A Read-Eval-Print Loop for those who want to interpret Lox code in real-time. Think of it as talking to your interpreter, and it talks back.
-4. **Optimization**: Because there’s always room for improvement. Even if it’s just squeezing out a few more nanoseconds.
-5. **Extended Error Messages**: We plan to make our error messages as descriptive as a novel, complete with literary references and motivational quotes.
+1. **Interpretation**: Implement the execution of Lox code based on the AST.
+1. **REPL Support**: Introduce a Read-Eval-Print Loop for real-time Lox code interpretation.
+1. **Optimization**: Enhance performance to achieve even faster execution times.
+1. **Extended Error Messages**: Provide detailed and descriptive error messages to improve debugging.
 
 ## 🤓 **Getting Started**
 
-If you’re itching to get your hands dirty, here’s how you can start using **OxidizedLox**:
+If you’re itching to get your hands dirty, here’s how you can start using **RustyLox**:
 
-1. **Clone the Repo**: 
+1. **Clone the Repo**:
    ```sh
    git clone https://github.com/yourusername/rustylox.git
    cd rustylox
+  
+
    ```
 
-2. **Build the Project**: 
+1. **Build the Project**:
    ```sh
    cargo build --release
    ```
 
-3. **Run the Interpreter**: 
+1. **Run the Interpreter**:
    ```sh
    ./runner.sh tokenize your_file.lox
    ```
 
-4. **Enjoy**: Sit back, relax, and watch as OxidizedLox does its magic.
+1. **Enjoy**: Sit back, relax, and watch as RustyLox does its magic.
 
 ## 🤝 **Contributing**
 
@@ -130,12 +220,12 @@ Got ideas? Found a bug? Want to add a feature? We’re all ears. Just make sure 
 
 ## 🎩 **Final Thoughts**
 
-OxidizedLox isn’t just an interpreter; it’s an adventure. It’s for those who like their code fast, safe, and just a bit irreverent. So, buckle up, because this is going to be a fun ride.
+RustyLox isn’t just an interpreter; it’s an adventure. It’s for those who like their code fast, safe, and just a bit irreverent. So, buckle up, because this is going to be a fun ride.
 
-Remember, in OxidizedLox, the only thing more important than the code is the story we tell along the way. And maybe, just maybe, you’ll find that writing interpreters is more fun than you thought.
+Remember, in RustyLox, the only thing more important than the code is the story we tell along the way. And maybe, just maybe, you’ll find that writing interpreters is more fun than you thought.
 
 Happy interpreting!
 
 ---
 
-*OxidizedLox - Because interpreting Lox should be both an art and a science.*
+*RustyLox - Because interpreting Lox should be both an art and a science.*
