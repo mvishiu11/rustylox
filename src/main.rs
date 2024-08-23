@@ -5,8 +5,6 @@ mod parser;
 mod error;
 
 use lexer::Lexer;
-use expr::{Expr, BinaryExpr, UnaryExpr, LiteralExpr};
-use token::{Token, TokenType};
 use std::env;
 use std::fs;
 use std::io::{self, Write};

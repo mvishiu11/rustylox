@@ -62,6 +62,7 @@ impl Parser {
     }
 
     /// Helper function to synchronize the parser after an error.
+    #[allow(dead_code)]
     fn synchronize(&mut self) {
         self.advance();
         while !self.is_at_end() {
