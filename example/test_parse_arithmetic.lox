@@ -1,0 +1,2 @@
+// Simple arithmetic
+10 + 2 * (3 - 1);
