@@ -31,24 +31,39 @@ pub enum LiteralExpr {
 
 impl Expr {
     pub fn pretty_print(&self) -> String {
+        self.pretty_print_with_indent(0)
+    }
+
+    fn pretty_print_with_indent(&self, indent: usize) -> String {
+        let indentation = " ".repeat(indent * 2);
         match self {
             Expr::Binary(expr) => format!(
-                "({} {} {})",
-                expr.operator.lexeme,
-                expr.left.pretty_print(),
-                expr.right.pretty_print()
+                "{}BinaryExpression ({:?})\n{}├── {}\n{}└── {}",
+                indentation,
+                expr.operator.token_type, // Display the token type for the operator
+                indentation,
+                expr.left.pretty_print_with_indent(indent + 1),
+                indentation,
+                expr.right.pretty_print_with_indent(indent + 1)
             ),
-            Expr::Grouping(expr) => format!("(group {})", expr.pretty_print()),
+            Expr::Grouping(expr) => format!(
+                "{}Grouping\n{}└── {}",
+                indentation,
+                indentation,
+                expr.pretty_print_with_indent(indent + 1)
+            ),
             Expr::Literal(expr) => match expr {
-                LiteralExpr::Number(n) => n.to_string(),
-                LiteralExpr::String(s) => s.clone(),
-                LiteralExpr::Boolean(b) => b.to_string(),
-                LiteralExpr::Nil => "nil".to_string(),
+                LiteralExpr::Number(n) => format!("{}Number ({})", indentation, n),
+                LiteralExpr::String(s) => format!("{}String ({})", indentation, s),
+                LiteralExpr::Boolean(b) => format!("{}Boolean ({})", indentation, b),
+                LiteralExpr::Nil => format!("{}Nil", indentation),
             },
             Expr::Unary(expr) => format!(
-                "({} {})",
-                expr.operator.lexeme,
-                expr.right.pretty_print()
+                "{}UnaryExpression ({:?})\n{}└── {}",
+                indentation,
+                expr.operator.token_type, // Display the token type for the operator
+                indentation,
+                expr.right.pretty_print_with_indent(indent + 1)
             ),
         }
     }
