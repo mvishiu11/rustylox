@@ -141,6 +141,15 @@ impl Lexer {
         });
     }
 
+    /// Adds a token of the specified type to the token list with specified text.
+    fn add_string_token(&mut self, token_type: TokenType, text: String) {
+        self.tokens.push(Token {
+            token_type,
+            lexeme: text.to_string(),
+            line: self.line,
+        });
+    }
+
     /// Handles string literals.
     fn handle_string(&mut self) {
         while self.peek() != '"' && !self.is_at_end() {
@@ -158,8 +167,8 @@ impl Lexer {
         // Consume the closing quote
         self.advance();
 
-        // let text = &self.source[self.start + 1..self.current - 1];
-        self.add_token(TokenType::String);
+        let text = &self.source[self.start + 1..self.current - 1];
+        self.add_string_token(TokenType::String, text.to_string());
     }
 
     /// Handles numeric literals.
