@@ -11,17 +11,65 @@ Why Rust, you ask? Rust provides performance and safety, giving us the thrill of
 ## 📑 **Table of Contents**
 
 - [📜 Project Overview](#-project-overview)
+  - [Current gramar](#current-grammar-in-ebnf)
+  - [Quick feature overview](#quick-feature-overview)
+- [🚀 Current Features](#-current-features)
 - [🛠 Lexing: The First Step in Our Grand Adventure](#-lexing-the-first-step-in-our-grand-adventure)
   - [How it works?](#how-it-works)
   - [Technical Details](#technical-details)
 - [🛠 Parsing: Turning Tokens into Meaningful Expressions](#-parsing-turning-tokens-into-meaningful-expressions)
   - [How it works?](#how-it-works-1)
   - [Technical Details](#technical-details-1)
-- [🚀 Current Features](#-current-features)
 - [🛣 Future Plans](#-future-plans)
 - [🤓 Getting Started](#-getting-started)
 - [🤝 Contributing](#-contributing)
 - [🎩 Final Thoughts](#-final-thoughts)
+
+## 🚀 **Current Features**
+
+### Current grammar in [EBNF](https://en.wikipedia.org/wiki/Extended_Backus%E2%80%93Naur_form)
+
+```ebnf
+expression   = equality ;
+
+equality     = comparison { ( "!=" | "==" ) comparison } ;
+
+comparison   = term { ( ">" | ">=" | "<" | "<=" ) term } ;
+
+term         = factor { ( "-" | "+" ) factor } ;
+
+factor       = unary { ( "/" | "*" ) unary } ;
+
+unary        = ( "!" | "-" ) unary
+             | primary ;
+
+primary      = NUMBER | STRING | "true" | "false" | "nil"
+             | "(" expression ")" ;
+```
+
+### Quick feature overview
+- **Tokenization**: Efficiently processes the Lox language, covering:
+  - **Keywords**: Recognizes reserved words such as `if`, `else`, `for`, `while`, `class`, `return`, and others.
+  - **Operators**: Identifies arithmetic operators (`+`, `-`, `*`, `/`), relational operators (`==`, `!=`, `<`, `>`, `<=`, `>=`), logical operators (`and`, `or`), and assignment operators (`=`, `+=`, `-=`).
+  - **Delimiters**: Handles punctuation and delimiters including parentheses (`(`, `)`), braces (`{`, `}`), brackets (`[`, `]`), commas (`,`), and semicolons (`;`).
+  - **Literals**: Supports string literals, numeric literals (integers and floating-point numbers), and boolean literals (`true`, `false`).
+  - **Identifiers**: Detects and tokenizes variable names, function names, and other user-defined identifiers.
+
+- **Parsing**: Capable of interpreting the Lox language syntax, including:
+  - **Basic Arithmetic**: Parses expressions involving addition (`+`), subtraction (`-`), multiplication (`*`), and division (`/`), and supports proper precedence and associativity rules.
+  - **Parenthesized Expressions**: Handles nested expressions within parentheses, ensuring correct order of operations.
+  - **Unary Operations**: Interprets unary operators such as negation (`-`) and logical not (`!`).
+  - **Binary Operations**: Supports binary operations with appropriate precedence levels.
+  - **Grouping**: Recognizes and correctly processes expressions grouped within parentheses for clarity and precedence.
+  - **Assignment Statements**: Parses assignment operations to variables, including compound assignments like `+=` and `-=`.
+
+- **Error Handling**: Features robust error reporting with a touch of humor, providing clear and contextually relevant messages for unexpected characters, invalid syntax, and other anomalies. Includes mechanisms for graceful recovery and informative feedback.
+
+- **EOF Handling**: Accurately detects and manages the end-of-file condition, ensuring that tokenization and parsing are correctly terminated and that no residual tokens are left unprocessed.
+
+- **User-Friendly Debugging**: Offers detailed diagnostic information for developers, including line numbers and token details, to facilitate efficient debugging and development.
+
+- **Interactive Feedback**: Provides real-time feedback during development, allowing users to see immediate results and identify issues as they arise.
 
 ## 🛠 **Lexing: The First Step in Our Grand Adventure**
 
@@ -152,30 +200,51 @@ BinaryExpression (Plus)
 - [Abstract Syntax Trees](https://en.wikipedia.org/wiki/Abstract_syntax_tree): A detailed explanation of abstract syntax trees and their role in representing hierarchical language structures.
 - [Context-Free Grammars](https://en.wikipedia.org/wiki/Context-free_grammar): An overview of context-free grammars, their theoretical foundations, and their significance in formal language theory.
 
-## 🚀 **Current Features**
+Certainly! Here’s a professional and detailed section on interpreter implementation, styled similarly to your lexing section:
 
-- **Tokenization**: Efficiently processes the Lox language, covering:
-  - **Keywords**: Recognizes reserved words such as `if`, `else`, `for`, `while`, `class`, `return`, and others.
-  - **Operators**: Identifies arithmetic operators (`+`, `-`, `*`, `/`), relational operators (`==`, `!=`, `<`, `>`, `<=`, `>=`), logical operators (`and`, `or`), and assignment operators (`=`, `+=`, `-=`).
-  - **Delimiters**: Handles punctuation and delimiters including parentheses (`(`, `)`), braces (`{`, `}`), brackets (`[`, `]`), commas (`,`), and semicolons (`;`).
-  - **Literals**: Supports string literals, numeric literals (integers and floating-point numbers), and boolean literals (`true`, `false`).
-  - **Identifiers**: Detects and tokenizes variable names, function names, and other user-defined identifiers.
+---
 
-- **Parsing**: Capable of interpreting the Lox language syntax, including:
-  - **Basic Arithmetic**: Parses expressions involving addition (`+`), subtraction (`-`), multiplication (`*`), and division (`/`), and supports proper precedence and associativity rules.
-  - **Parenthesized Expressions**: Handles nested expressions within parentheses, ensuring correct order of operations.
-  - **Unary Operations**: Interprets unary operators such as negation (`-`) and logical not (`!`).
-  - **Binary Operations**: Supports binary operations with appropriate precedence levels.
-  - **Grouping**: Recognizes and correctly processes expressions grouped within parentheses for clarity and precedence.
-  - **Assignment Statements**: Parses assignment operations to variables, including compound assignments like `+=` and `-=`.
+## 🎭 **Interpreting: Breathing Life into Tokens**
 
-- **Error Handling**: Features robust error reporting with a touch of humor, providing clear and contextually relevant messages for unexpected characters, invalid syntax, and other anomalies. Includes mechanisms for graceful recovery and informative feedback.
+Ah, interpreting, where the magic of execution happens! It’s the enchanting process that turns our neat tokens and well-formed expressions into actual results. In RustyLox, the interpreter isn’t just a mechanical evaluator; it’s a thoughtful and precise calculator with a flair for handling both simple arithmetic and complex expressions.
 
-- **EOF Handling**: Accurately detects and manages the end-of-file condition, ensuring that tokenization and parsing are correctly terminated and that no residual tokens are left unprocessed.
+### How It Works
 
-- **User-Friendly Debugging**: Offers detailed diagnostic information for developers, including line numbers and token details, to facilitate efficient debugging and development.
+1. **Input**: You provide it with an abstract syntax tree (AST) of Lox expressions, the result of the parsing phase. This AST represents your Lox code's structure and logic, ready for evaluation.
+2. **Processing**: The interpreter traverses this AST, evaluating each node according to its type—whether it's a literal value, a unary operation, a binary operation, or a grouped expression.
+3. **Output**: The result is a computed value, an error, or sometimes a sophisticated calculation that reflects the logic encoded in your Lox program.
 
-- **Interactive Feedback**: Provides real-time feedback during development, allowing users to see immediate results and identify issues as they arise.
+**Example**
+
+Consider this simple Lox expression:
+
+```js
+- (3 + 5) * 2
+```
+
+The output would be:
+
+```bash
+-16
+```
+
+### Technical Details
+
+#### **Interpreter Implementation**
+
+- **Expression Evaluation**: Our interpreter evaluates Lox expressions by recursively traversing the AST. It handles different expression types such as literals, unary operations, binary operations, and groupings. This method ensures that complex expressions are broken down into simpler, manageable computations.
+
+- **Error Handling**: The interpreter is equipped with robust error handling to gracefully manage issues like type errors, division by zero, and unknown operators. This resilience ensures that any deviations from expected behavior are reported with clear and informative error messages.
+
+- **Floating-Point Arithmetic**: For numerical operations, the interpreter performs floating-point arithmetic, supporting various binary operations like addition, subtraction, multiplication, and division. It also handles comparison operations, providing results in the form of floating-point numbers.
+
+- **Logical Operations**: Unary operations like logical NOT and negation are implemented with care, ensuring accurate Boolean evaluations and numeric negations. 
+
+**Further Reading**
+
+- [Abstract Syntax Trees (AST)](https://en.wikipedia.org/wiki/Abstract_syntax_tree): An introduction to abstract syntax trees and their role in representing the structure of source code.
+- [Expression Evaluation](https://en.wikipedia.org/wiki/Expression_(computer_science)): A detailed look at the evaluation of expressions and the principles behind expression processing.
+- [Error Handling in Rust](https://doc.rust-lang.org/book/ch09-02-recoverable-errors-with-result.html): A guide to error handling in Rust, including the use of `Result` and `Option` types.
 
 ## 🛣 **Future Plans**
 
