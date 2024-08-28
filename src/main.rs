@@ -85,7 +85,7 @@ fn main() {
                 let mut parser = parser::Parser::new(tokens.to_vec());
                 match parser.parse() {
                     Ok(expr) => match interpreter::interpret(&expr) {
-                        Ok(result) => println!("{}", result),
+                        Ok(()) => (),
                         Err(e) => writeln!(io::stderr(), "{}", e).unwrap(),
                     },
                     Err(e) => writeln!(io::stderr(), "{}", e).unwrap(),
@@ -111,7 +111,7 @@ fn main() {
                 let mut parser = parser::Parser::new(tokens.to_vec());
                 match parser.parse() {
                     Ok(expr) => match interpreter::interpret(&expr) {
-                        Ok(result) => println!("{}", result),
+                        Ok(()) => (),
                         Err(e) => writeln!(io::stderr(), "{}", e).unwrap(),
                     },
                     Err(e) => writeln!(io::stderr(), "{}", e).unwrap(),
