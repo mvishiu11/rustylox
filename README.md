@@ -6,7 +6,9 @@ Welcome to **RustyLox**, where the beauty of Lox meets the rugged charm of Rust.
 
 **RustyLox** is a Lox interpreter implemented in Rust, inspired by Robert Nystrom’s *Crafting Interpreters*. Our goal is to create a Lox interpreter that's both lightning-fast and a little bit cheeky. Think of it as Lox with a rust-colored patina.
 
-Why Rust, you ask? Rust provides performance and safety, giving us the thrill of low-level programming while ensuring memory safety. It's like riding a motorcycle with a helmet on—thrilling, yet secure.
+**Update**
+
+As of 03/09/2024 Rustylox supports a [live playground](https://mvishiu11.github.io/rustylox-playground)! Check it out!
 
 ## 📑 **Table of Contents**
 
