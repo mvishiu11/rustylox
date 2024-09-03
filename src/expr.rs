@@ -8,6 +8,7 @@ pub enum Expr {
     Unary(Box<UnaryExpr>),
     Variable(Token),
     Assign(Token, Box<Expr>),
+    Logical(Box<LogicalExpr>),
 }
 
 #[derive(Debug, Clone)]
@@ -29,6 +30,13 @@ pub enum LiteralExpr {
     String(String),
     Boolean(bool),
     Nil
+}
+
+#[derive(Debug, Clone)]
+pub struct LogicalExpr {
+    pub left: Expr,
+    pub operator: Token,
+    pub right: Expr,
 }
 
 #[allow(dead_code)]
@@ -75,6 +83,15 @@ impl Expr {
                 token.lexeme,
                 indentation,
                 expr.pretty_print_with_indent(indent + 1)
+            ),
+            Expr::Logical(expr) => format!(
+                "{}LogicalExpression ({:?})\n{}├── {}\n{}└── {}",
+                indentation,
+                expr.operator.token_type,
+                indentation,
+                expr.left.pretty_print_with_indent(indent + 1),
+                indentation,
+                expr.right.pretty_print_with_indent(indent + 1)
             ),
         }
     }

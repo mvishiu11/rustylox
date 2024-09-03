@@ -1,5 +1,5 @@
 use crate::token::{Token, TokenType};
-use crate::expr::{Expr, BinaryExpr, UnaryExpr, LiteralExpr};
+use crate::expr::{BinaryExpr, Expr, LiteralExpr, LogicalExpr, UnaryExpr};
 use crate::error::ParserError;
 use crate::stmt::Stmt;
 
@@ -205,7 +205,7 @@ impl Parser {
 
     /// Parse assignment expressions.
     fn assignment(&mut self) -> Result<Expr, ParserError> {
-        let expr = self.equality()?;
+        let expr = self.or()?;
 
         if self.match_token(&[TokenType::Equal]) {
             let equals = self.previous().clone();
@@ -216,6 +216,32 @@ impl Parser {
             }
 
             return Err(self.error(&equals, "Invalid assignment target."));
+        }
+
+        Ok(expr)
+    }
+
+    /// Parse logical OR expressions.
+    fn or(&mut self) -> Result<Expr, ParserError> {
+        let mut expr = self.and()?;
+
+        while self.match_token(&[TokenType::Or]) {
+            let operator = self.previous().clone();
+            let right = self.and()?;
+            expr = Expr::Logical(Box::new(LogicalExpr { left: expr, operator, right }));
+        }
+
+        Ok(expr)
+    }
+
+    /// Parse logical AND expressions.
+    fn and(&mut self) -> Result<Expr, ParserError> {
+        let mut expr = self.equality()?;
+
+        while self.match_token(&[TokenType::And]) {
+            let operator = self.previous().clone();
+            let right = self.equality()?;
+            expr = Expr::Logical(Box::new(LogicalExpr { left: expr, operator, right }));
         }
 
         Ok(expr)

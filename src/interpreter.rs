@@ -143,5 +143,27 @@ pub fn evaluate(expr: &Expr, environment: &mut Environment) -> Result<Expr, Eval
             }
             Ok(value)
         },
+        // Logical operators - truthiness is defined in the same way as in Java
+        Expr::Logical(logical) => {
+            let left = evaluate(&logical.left, environment)?;
+            if logical.operator.token_type == TokenType::Or {
+                if is_truthy(&left) {
+                    return Ok(left);
+                }
+            } else {
+                if !is_truthy(&left) {
+                    return Ok(left);
+                }
+            }
+            evaluate(&logical.right, environment)
+        },
+    }
+}
+
+fn is_truthy(expr: &Expr) -> bool {
+    match expr {
+        Expr::Literal(LiteralExpr::Nil) => false,
+        Expr::Literal(LiteralExpr::Boolean(b)) => *b,
+        _ => true,
     }
 }
