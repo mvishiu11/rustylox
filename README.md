@@ -30,7 +30,24 @@ Why Rust, you ask? Rust provides performance and safety, giving us the thrill of
 ### Current grammar in [EBNF](https://en.wikipedia.org/wiki/Extended_Backus%E2%80%93Naur_form)
 
 ```ebnf
-expression   = equality ;
+program      = { declaration }, EOF ;
+
+declaration  = varDecl 
+             | statement ;
+
+varDecl      = "var", IDENTIFIER, [ "=" expression ], ";" ;
+
+statement    = exprStmt 
+             | printStmt ;
+
+exprStmt     = expression, ";" ;
+
+printStmt    = "print", expression, ";" ;
+
+expression   = assignment ;
+
+assignment   = IDENTIFIER, "=", assignment
+             | equality ;
 
 equality     = comparison { ( "!=" | "==" ) comparison } ;
 
@@ -43,8 +60,13 @@ factor       = unary { ( "/" | "*" ) unary } ;
 unary        = ( "!" | "-" ) unary
              | primary ;
 
-primary      = NUMBER | STRING | "true" | "false" | "nil"
-             | "(" expression ")" ;
+primary      = NUMBER 
+             | STRING 
+             | "true" 
+             | "false" 
+             | "nil"
+             | "(" expression ")" 
+             | IDENTIFIER ;
 ```
 
 ### Quick feature overview
