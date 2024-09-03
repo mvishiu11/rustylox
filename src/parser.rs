@@ -1,22 +1,115 @@
 use crate::token::{Token, TokenType};
 use crate::expr::{Expr, BinaryExpr, UnaryExpr, LiteralExpr};
 use crate::error::ParserError;
+use crate::stmt::Stmt;
 
-/// The Parser struct, responsible for converting a series of tokens into an AST.
+// The Parser struct, responsible for converting a series of tokens into an AST.
 pub struct Parser {
     tokens: Vec<Token>,
     current: usize,
+    errors: Vec<ParserError>, // Collects all parsing errors
 }
 
 impl Parser {
     /// Create a new Parser instance.
     pub fn new(tokens: Vec<Token>) -> Self {
-        Parser { tokens, current: 0 }
+        Parser {
+            tokens,
+            current: 0,
+            errors: Vec::new(),
+        }
     }
 
-    /// Parse the input tokens and produce an AST.
-    pub fn parse(&mut self) -> Result<Expr, ParserError> {
-        self.expression()
+    /// Parse the input tokens and produce an AST. Returns a vector of statements and any errors found.
+    pub fn parse(&mut self) -> (Vec<Stmt>, Vec<ParserError>) {
+        let mut statements = Vec::new();
+        while !self.is_at_end() {
+            if let Some(stmt) = self.declaration() {
+                statements.push(stmt);
+            }
+        }
+        (statements, self.errors.clone())
+    }
+
+    /// Parse a declaration, catching errors and continuing to parse.
+    fn declaration(&mut self) -> Option<Stmt> {
+        match self.try_declaration() {
+            Ok(stmt) => Some(stmt),
+            Err(err) => {
+                self.errors.push(err);
+                self.synchronize();
+                None
+            }
+        }
+    }
+
+    /// Attempt to parse a declaration, returning an error on failure.
+    fn try_declaration(&mut self) -> Result<Stmt, ParserError> {
+        if self.match_token(&[TokenType::Var]) {
+            self.var_declaration()
+        } else {
+            self.statement()
+        }
+    }
+
+    /// Parse a single statement.
+    fn statement(&mut self) -> Result<Stmt, ParserError> {
+        if self.match_token(&[TokenType::Print]) {
+            self.print_statement()
+        } else if {
+            self.match_token(&[TokenType::LeftBrace])
+        } {
+            self.block()
+        } else if self.match_token(&[TokenType::Var]) {
+            self.var_declaration()
+        } else {
+            self.expression_statement()
+        }
+    }
+
+    /// Parse a print statement.
+    fn print_statement(&mut self) -> Result<Stmt, ParserError> {
+        let value = self.expression()?;
+        self.consume(TokenType::Semicolon, "Expect ';' after value.")?;
+        Ok(Stmt::Print(value))
+    }
+
+    /// Parse a block of statements.
+    fn block(&mut self) -> Result<Stmt, ParserError> {
+        let mut statements = Vec::new();
+    
+        while !self.check(TokenType::RightBrace) && !self.is_at_end() {
+            if let Some(stmt) = self.declaration() {
+                statements.push(stmt);
+            }
+        }
+    
+        self.consume(TokenType::RightBrace, "Expect '}' after block.")?;
+        return Ok(Stmt::Block(statements));
+    }
+
+    /// Parse a variable declaration.
+    fn var_declaration(&mut self) -> Result<Stmt, ParserError> {
+        let name_token = self.consume(TokenType::Identifier, "Expect variable name.")?;
+        let name = name_token.lexeme.clone();
+    
+        let initializer = if self.match_token(&[TokenType::Equal]) {
+            Some(self.expression()?)
+        } else {
+            None
+        };
+    
+        self.consume(TokenType::Semicolon, "Expect ';' after variable declaration.")?;
+    
+        Ok(Stmt::Var(name, initializer))
+    }
+    
+
+    /// Parse an expression statement.
+    fn expression_statement(&mut self) -> Result<Stmt, ParserError> {
+        let expr = self.expression()?;
+        self.consume(TokenType::Semicolon, "Expect ';' after expression.")?;
+        Ok(Stmt::Expression(expr))
     }
 
     /// Check if the parser has reached the end of the input tokens.
@@ -62,7 +155,6 @@ impl Parser {
     }
 
     /// Helper function to synchronize the parser after an error.
-    #[allow(dead_code)]
     fn synchronize(&mut self) {
         self.advance();
         while !self.is_at_end() {
@@ -91,7 +183,25 @@ impl Parser {
 
     /// Parse an expression. Currently handles equality expressions.
     fn expression(&mut self) -> Result<Expr, ParserError> {
-        self.equality()
+        self.assignment()
+    }
+
+    /// Parse assignment expressions.
+    fn assignment(&mut self) -> Result<Expr, ParserError> {
+        let expr = self.equality()?;
+
+        if self.match_token(&[TokenType::Equal]) {
+            let equals = self.previous().clone();
+            let value = self.assignment()?;
+
+            if let Expr::Variable(name) = expr {
+                return Ok(Expr::Assign(name, Box::new(value)));
+            }
+
+            return Err(self.error(&equals, "Invalid assignment target."));
+        }
+
+        Ok(expr)
     }
 
     /// Parse equality expressions, handling `==` and `!=` operators.
@@ -190,6 +300,10 @@ impl Parser {
             let expr = self.expression()?;
             self.consume(TokenType::RightParen, "Expect ')' after expression.")?;
             return Ok(Expr::Grouping(Box::new(expr)));
+        }
+
+        if self.match_token(&[TokenType::Identifier]) {
+            return Ok(Expr::Variable(self.previous().clone()));
         }
 
         Err(self.error(self.peek(), "Expect expression."))
