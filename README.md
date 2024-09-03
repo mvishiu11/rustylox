@@ -69,7 +69,7 @@ primary      = NUMBER | STRING | "true" | "false" | "nil"
 
 - **User-Friendly Debugging**: Offers detailed diagnostic information for developers, including line numbers and token details, to facilitate efficient debugging and development.
 
-- **Interactive Feedback**: Provides real-time feedback during development, allowing users to see immediate results and identify issues as they arise.
+- **Interactive Feedback in CLI**: Our CLI provides real-time feedback during development, allowing users to see immediate results and identify issues as they arise.
 
 ## 🛠 **Lexing: The First Step in Our Grand Adventure**
 
@@ -263,19 +263,25 @@ If you’re itching to get your hands dirty, here’s how you can start using **
    ```sh
    git clone https://github.com/yourusername/rustylox.git
    cd rustylox
-  
-
-   ```
-
-1. **Build the Project**:
-   ```sh
-   cargo build --release
    ```
 
 1. **Run the Interpreter**:
    ```sh
-   ./runner.sh tokenize your_file.lox
+   ./rustylox.sh interpret your_file.lox
    ```
+
+1. **Or launch our friendly CLI!**
+```sh
+./rustylox.sh cli
+```
+
+In this case you'll see:
+
+```sh
+🚀 Welcome to the Lox programming language REPL!
+✨ Program logs will be displayed here. Stay tuned!
+> 
+```
 
 1. **Enjoy**: Sit back, relax, and watch as RustyLox does its magic.
 
