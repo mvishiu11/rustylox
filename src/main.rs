@@ -4,6 +4,8 @@ mod expr;
 mod parser;
 mod error;
 mod interpreter;
+mod stmt;
+mod environ;
 
 use lexer::Lexer;
 use std::env;
@@ -50,7 +52,7 @@ fn main() {
             } else {
                 println!("EOF  null");
             }
-        }
+        },
         PARSE => {
             writeln!(io::stdout(), "✨ Program logs will be displayed here. Stay tuned!").unwrap();
 
@@ -63,14 +65,19 @@ fn main() {
                 let mut lexer = Lexer::new(file_contents);
                 let tokens = lexer.tokenize();
                 let mut parser = parser::Parser::new(tokens.to_vec());
-                match parser.parse() {
-                    Ok(expr) => println!("{}", expr.pretty_print()),
-                    Err(e) => writeln!(io::stderr(), "{}", e).unwrap(),
+                let (statements, errors) = parser.parse();
+                
+                if !errors.is_empty() {
+                    for error in errors {
+                        writeln!(io::stderr(), "{}", error).unwrap();
+                    }
+                } else {
+                    println!("Parsed statements: {:?}", statements);
                 }
             } else {
                 println!("EOF  null");
             }
-        }
+        },
         INTERPRET => {
             writeln!(io::stdout(), "✨ Program logs will be displayed here. Stay tuned!").unwrap();
 
@@ -83,12 +90,17 @@ fn main() {
                 let mut lexer = Lexer::new(file_contents);
                 let tokens = lexer.tokenize();
                 let mut parser = parser::Parser::new(tokens.to_vec());
-                match parser.parse() {
-                    Ok(expr) => match interpreter::interpret(&expr) {
+                let (statements, errors) = parser.parse();
+
+                if !errors.is_empty() {
+                    for error in errors {
+                        writeln!(io::stderr(), "{}", error).unwrap();
+                    }
+                } else {
+                    match interpreter::interpret(&statements) {
                         Ok(()) => (),
                         Err(e) => writeln!(io::stderr(), "{}", e).unwrap(),
-                    },
-                    Err(e) => writeln!(io::stderr(), "{}", e).unwrap(),
+                    }
                 }
             } else {
                 println!("EOF  null");
@@ -109,12 +121,17 @@ fn main() {
                 let mut lexer = Lexer::new(input.clone());
                 let tokens = lexer.tokenize();
                 let mut parser = parser::Parser::new(tokens.to_vec());
-                match parser.parse() {
-                    Ok(expr) => match interpreter::interpret(&expr) {
+                let (statements, errors) = parser.parse();
+
+                if !errors.is_empty() {
+                    for error in errors {
+                        writeln!(io::stderr(), "{}", error).unwrap();
+                    }
+                } else {
+                    match interpreter::interpret(&statements) {
                         Ok(()) => (),
                         Err(e) => writeln!(io::stderr(), "{}", e).unwrap(),
-                    },
-                    Err(e) => writeln!(io::stderr(), "{}", e).unwrap(),
+                    }
                 }
 
                 input.clear();
