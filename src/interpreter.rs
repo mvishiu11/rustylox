@@ -1,18 +1,20 @@
 use std::error::Error;
+use std::fmt::Write;
 use crate::{error::EvalError, expr::{Expr, LiteralExpr}, stmt::Stmt, token::TokenType};
 use crate::environ::Environment;
 
 impl Error for EvalError {}
 
-pub fn interpret(statements: &[Stmt]) -> Result<(), EvalError> {
+pub fn interpret(statements: &[Stmt]) -> Result<String, EvalError> {
     let mut environment = Environment::new();
+    let mut output = String::new();
     for statement in statements {
-        execute(statement, &mut environment)?;
+        execute(statement, &mut environment, &mut output)?;
     }
-    Ok(())
+    Ok(output)
 }
 
-fn execute(stmt: &Stmt, environment: &mut Environment) -> Result<(), EvalError> {
+fn execute(stmt: &Stmt, environment: &mut Environment, output: &mut String) -> Result<(), EvalError> {
     match stmt {
         Stmt::Expression(expr) => {
             evaluate(expr, environment)?;
@@ -22,10 +24,10 @@ fn execute(stmt: &Stmt, environment: &mut Environment) -> Result<(), EvalError> 
             match value {
                 Expr::Literal(literal) => {
                     match literal {
-                        LiteralExpr::Number(n) => println!("{}", n),
-                        LiteralExpr::String(s) => println!("{}", s),
-                        LiteralExpr::Boolean(b) => println!("{}", b),
-                        LiteralExpr::Nil => println!("nil"),
+                        LiteralExpr::Number(n) => writeln!(output, "{}", n).unwrap(),
+                        LiteralExpr::String(s) => writeln!(output, "{}", s).unwrap(),
+                        LiteralExpr::Boolean(b) => writeln!(output, "{}", b).unwrap(),
+                        LiteralExpr::Nil => writeln!(output, "nil").unwrap(),
                     }
                 },
                 _ => return Err(EvalError::TypeError("Invalid expression type in print statement".to_string())),
@@ -34,7 +36,7 @@ fn execute(stmt: &Stmt, environment: &mut Environment) -> Result<(), EvalError> 
         Stmt::Block(statements) => {
             let mut block_environment = Environment::new_enclosed(environment.clone());
             for statement in statements {
-                execute(statement, &mut block_environment)?;
+                execute(statement, &mut block_environment, output)?;
             }
         }
         Stmt::Var(name, initializer) => {

@@ -1,16 +1,7 @@
-mod lexer;
-mod token;
-mod expr;
-mod parser;
-mod error;
-mod interpreter;
-mod stmt;
-mod environ;
-
-use lexer::Lexer;
 use std::env;
-use std::fs;
 use std::io::{self, Write};
+use rustylox::{run_interpret, run_parse, run_tokenize, lexer::Lexer, parser};
+use rustylox::interpreter;
 
 const TOKENIZE: &str = "tokenize";
 const PARSE: &str = "parse";
@@ -29,85 +20,16 @@ fn main() {
     let mut filename = "";
     if command == CLI {
         println!("🚀 Welcome to the Lox programming language REPL!");
-    }
-    else {
+    } else {
         filename = &args[2];
     }
 
     match command.as_str() {
-        TOKENIZE => {
-            writeln!(io::stdout(), "✨ Program logs will be displayed here. Stay tuned!").unwrap();
-
-            let file_contents = fs::read_to_string(filename).unwrap_or_else(|_| {
-                writeln!(io::stderr(), "Failed to read file {}", filename).unwrap();
-                String::new()
-            });
-
-            if !file_contents.is_empty() {
-                let mut lexer = Lexer::new(file_contents);
-                let tokens = lexer.tokenize();
-                for token in tokens {
-                    println!("{:?}", token);
-                }
-            } else {
-                println!("EOF  null");
-            }
-        },
-        PARSE => {
-            writeln!(io::stdout(), "✨ Program logs will be displayed here. Stay tuned!").unwrap();
-
-            let file_contents = fs::read_to_string(filename).unwrap_or_else(|_| {
-                writeln!(io::stderr(), "Failed to read file {}", filename).unwrap();
-                String::new()
-            });
-
-            if !file_contents.is_empty() {
-                let mut lexer = Lexer::new(file_contents);
-                let tokens = lexer.tokenize();
-                let mut parser = parser::Parser::new(tokens.to_vec());
-                let (statements, errors) = parser.parse();
-                
-                if !errors.is_empty() {
-                    for error in errors {
-                        writeln!(io::stderr(), "{}", error).unwrap();
-                    }
-                } else {
-                    println!("Parsed statements: {:?}", statements);
-                }
-            } else {
-                println!("EOF  null");
-            }
-        },
-        INTERPRET => {
-            writeln!(io::stdout(), "✨ Program logs will be displayed here. Stay tuned!").unwrap();
-
-            let file_contents = fs::read_to_string(filename).unwrap_or_else(|_| {
-                writeln!(io::stderr(), "Failed to read file {}", filename).unwrap();
-                String::new()
-            });
-
-            if !file_contents.is_empty() {
-                let mut lexer = Lexer::new(file_contents);
-                let tokens = lexer.tokenize();
-                let mut parser = parser::Parser::new(tokens.to_vec());
-                let (statements, errors) = parser.parse();
-
-                if !errors.is_empty() {
-                    for error in errors {
-                        writeln!(io::stderr(), "{}", error).unwrap();
-                    }
-                } else {
-                    match interpreter::interpret(&statements) {
-                        Ok(()) => (),
-                        Err(e) => writeln!(io::stderr(), "{}", e).unwrap(),
-                    }
-                }
-            } else {
-                println!("EOF  null");
-            }
-        }
+        TOKENIZE => run_tokenize(filename),
+        PARSE => run_parse(filename),
+        INTERPRET => run_interpret(filename),
         CLI => {
-            writeln!(io::stdout(), "✨ Program logs will be displayed here. Stay tuned!").unwrap();
+            println!("✨ Program logs will be displayed here. Stay tuned!");
 
             let mut input = String::new();
             loop {
@@ -123,15 +45,17 @@ fn main() {
                 let mut parser = parser::Parser::new(tokens.to_vec());
                 let (statements, errors) = parser.parse();
 
-                if !errors.is_empty() {
-                    for error in errors {
-                        writeln!(io::stderr(), "{}", error).unwrap();
-                    }
+                let output = if !errors.is_empty() {
+                    errors.into_iter().map(|e| e.to_string()).collect::<Vec<_>>().join("\n")
                 } else {
                     match interpreter::interpret(&statements) {
-                        Ok(()) => (),
-                        Err(e) => writeln!(io::stderr(), "{}", e).unwrap(),
+                        Ok(output) => output,
+                        Err(e) => e.to_string(),
                     }
+                };
+
+                if !output.is_empty() {
+                    writeln!(io::stderr(), "{}", output).unwrap();
                 }
 
                 input.clear();
@@ -140,7 +64,6 @@ fn main() {
         _ => {
             writeln!(io::stderr(), "Unknown command: {}", command).unwrap();
             writeln!(io::stderr(), "Commands: {TOKENIZE} {PARSE} {INTERPRET} {CLI}").unwrap();
-            return;
         }
     }
 }
