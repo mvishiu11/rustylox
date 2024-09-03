@@ -6,6 +6,8 @@ pub enum Expr {
     Grouping(Box<Expr>),
     Literal(LiteralExpr),
     Unary(Box<UnaryExpr>),
+    Variable(Token),
+    Assign(Token, Box<Expr>),
 }
 
 #[derive(Debug, Clone)]
@@ -29,6 +31,7 @@ pub enum LiteralExpr {
     Nil
 }
 
+#[allow(dead_code)]
 impl Expr {
     pub fn pretty_print(&self) -> String {
         self.pretty_print_with_indent(0)
@@ -40,7 +43,7 @@ impl Expr {
             Expr::Binary(expr) => format!(
                 "{}BinaryExpression ({:?})\n{}├── {}\n{}└── {}",
                 indentation,
-                expr.operator.token_type, // Display the token type for the operator
+                expr.operator.token_type,
                 indentation,
                 expr.left.pretty_print_with_indent(indent + 1),
                 indentation,
@@ -61,9 +64,17 @@ impl Expr {
             Expr::Unary(expr) => format!(
                 "{}UnaryExpression ({:?})\n{}└── {}",
                 indentation,
-                expr.operator.token_type, // Display the token type for the operator
+                expr.operator.token_type,
                 indentation,
                 expr.right.pretty_print_with_indent(indent + 1)
+            ),
+            Expr::Variable(token) => format!("{}Variable ({})", indentation, token.lexeme),
+            Expr::Assign(token, expr) => format!(
+                "{}Assign ({})\n{}└── {}",
+                indentation,
+                token.lexeme,
+                indentation,
+                expr.pretty_print_with_indent(indent + 1)
             ),
         }
     }
