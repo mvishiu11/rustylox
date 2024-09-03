@@ -1,5 +1,6 @@
 use std::env;
 use std::io::{self, Write};
+use rustylox::environ::Environment;
 use rustylox::{run_interpret, run_parse, run_tokenize, lexer::Lexer, parser};
 use rustylox::interpreter;
 
@@ -32,6 +33,7 @@ fn main() {
             println!("✨ Program logs will be displayed here. Stay tuned!");
 
             let mut input = String::new();
+            let mut cli_environ = Environment::new();
             loop {
                 print!("> ");
                 io::stdout().flush().unwrap();
@@ -48,7 +50,7 @@ fn main() {
                 let output = if !errors.is_empty() {
                     errors.into_iter().map(|e| e.to_string()).collect::<Vec<_>>().join("\n")
                 } else {
-                    match interpreter::interpret(&statements) {
+                    match interpreter::interpret_with_env(&statements, Some(&mut cli_environ)) {
                         Ok(output) => output,
                         Err(e) => e.to_string(),
                     }
