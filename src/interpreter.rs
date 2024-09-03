@@ -6,7 +6,12 @@ use crate::environ::Environment;
 impl Error for EvalError {}
 
 pub fn interpret(statements: &[Stmt]) -> Result<String, EvalError> {
-    let mut environment = Environment::new();
+    interpret_with_env(statements, None)
+}
+
+pub fn interpret_with_env(statements: &[Stmt], environ: Option<&mut Environment>) -> Result<String, EvalError> {
+    let mut clean_environ = Environment::new();
+    let mut environment = environ.unwrap_or(&mut clean_environ);
     let mut output = String::new();
     for statement in statements {
         execute(statement, &mut environment, &mut output)?;
@@ -18,6 +23,18 @@ fn execute(stmt: &Stmt, environment: &mut Environment, output: &mut String) -> R
     match stmt {
         Stmt::Expression(expr) => {
             evaluate(expr, environment)?;
+        }
+        Stmt::If(condition, then_branch, else_branch) => {
+            let condition_value = evaluate(condition, environment)?;
+            if let Expr::Literal(LiteralExpr::Boolean(b)) = condition_value {
+                if b {
+                    execute(&*then_branch, environment, output)?;
+                } else if let Some(else_branch) = else_branch {
+                    execute(&*else_branch, environment, output)?;
+                }
+            } else {
+                return Err(EvalError::TypeError("If condition must be a boolean".to_string()));
+            }
         }
         Stmt::Print(expr) => {
             let value = evaluate(expr, environment)?;
