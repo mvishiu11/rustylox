@@ -1,31 +1,65 @@
 use std::error::Error;
-use crate::{error::EvalError, expr::{Expr, LiteralExpr}, token::TokenType};
+use crate::{error::EvalError, expr::{Expr, LiteralExpr}, stmt::Stmt, token::TokenType};
+use crate::environ::Environment;
 
 impl Error for EvalError {}
 
-// Function to print or handle the result of an expression
-pub fn interpret(expr: &Expr) -> Result<(), EvalError> {
-    match evaluate(expr)? {
-        Expr::Literal(literal) => {
-            match literal {
-                LiteralExpr::Number(n) => println!("{}", n),
-                LiteralExpr::String(s) => println!("{}", s),
-                LiteralExpr::Boolean(b) => println!("{}", b),
-                LiteralExpr::Nil => println!("Nil"),
-            }
-            Ok(())
-        },
-        // Handle other types of expressions if needed
-        _ => Err(EvalError::TypeError("Unhandled expression type".to_string())),
+pub fn interpret(statements: &[Stmt]) -> Result<(), EvalError> {
+    let mut environment = Environment::new();
+    for statement in statements {
+        execute(statement, &mut environment)?;
     }
+    Ok(())
 }
 
-// Define the `evaluate` function
-pub fn evaluate(expr: &Expr) -> Result<Expr, EvalError> {
+fn execute(stmt: &Stmt, environment: &mut Environment) -> Result<(), EvalError> {
+    match stmt {
+        Stmt::Expression(expr) => {
+            evaluate(expr, environment)?;
+        }
+        Stmt::Print(expr) => {
+            let value = evaluate(expr, environment)?;
+            match value {
+                Expr::Literal(literal) => {
+                    match literal {
+                        LiteralExpr::Number(n) => println!("{}", n),
+                        LiteralExpr::String(s) => println!("{}", s),
+                        LiteralExpr::Boolean(b) => println!("{}", b),
+                        LiteralExpr::Nil => println!("nil"),
+                    }
+                },
+                _ => return Err(EvalError::TypeError("Invalid expression type in print statement".to_string())),
+            }
+        }
+        Stmt::Block(statements) => {
+            let mut block_environment = Environment::new_enclosed(environment.clone());
+            for statement in statements {
+                execute(statement, &mut block_environment)?;
+            }
+        }
+        Stmt::Var(name, initializer) => {
+            let value = if let Some(expr) = initializer {
+                evaluate(expr, environment)?
+            } else {
+                Expr::Literal(LiteralExpr::Nil)
+            };
+
+            // Define the variable in the environment
+            if let Expr::Literal(literal_value) = value {
+                environment.define(name.clone(), literal_value);
+            }
+        }
+        _ => return Err(EvalError::SyntaxError("Unknown statement type".to_string())),
+    }
+    Ok(())
+}
+
+/// Evaluate an expression and return the result.
+pub fn evaluate(expr: &Expr, environment: &mut Environment) -> Result<Expr, EvalError> {
     match expr {
-        Expr::Literal(literal) => Ok(Expr::Literal(literal.clone())), // Return the literal as-is
+        Expr::Literal(literal) => Ok(Expr::Literal(literal.clone())),
         Expr::Unary(unary) => {
-            let right = evaluate(&unary.right)?;
+            let right = evaluate(&unary.right, environment)?;
             match right {
                 Expr::Literal(LiteralExpr::Number(n)) => match unary.operator.token_type {
                     TokenType::Minus => Ok(Expr::Literal(LiteralExpr::Number(-n))),
@@ -40,8 +74,8 @@ pub fn evaluate(expr: &Expr) -> Result<Expr, EvalError> {
             }
         },
         Expr::Binary(binary) => {
-            let left = evaluate(&binary.left)?;
-            let right = evaluate(&binary.right)?;
+            let left = evaluate(&binary.left, environment)?;
+            let right = evaluate(&binary.right, environment)?;
             match (left, right) {
                 (Expr::Literal(LiteralExpr::Number(l)), Expr::Literal(LiteralExpr::Number(r))) => match binary.operator.token_type {
                     TokenType::Plus => Ok(Expr::Literal(LiteralExpr::Number(l + r))),
@@ -75,6 +109,20 @@ pub fn evaluate(expr: &Expr) -> Result<Expr, EvalError> {
                 _ => Err(EvalError::TypeError("Operands must be compatible for the operation".to_string())),
             }
         },
-        Expr::Grouping(grouping) => evaluate(&**grouping),
+        Expr::Grouping(grouping) => evaluate(&**grouping, environment),
+        Expr::Variable(name) => {
+            let value = environment.get(&name);
+            match value {
+                Ok(literal) => Ok(Expr::Literal(literal)),
+                Err(e) => Err(e),
+            }
+        },
+        Expr::Assign(name, expr) => {
+            let value = evaluate(&expr, environment)?;
+            if let Expr::Literal(ref literal) = value {
+                environment.assign(&name.clone(), literal.clone())?;
+            }
+            Ok(value)
+        },
     }
 }
