@@ -67,7 +67,7 @@ pub fn run_interpret(filename: &str) {
     println!("{}", interpret(&file_contents));
 }
 
-fn read_file(filename: &str) -> String {
+pub fn read_file(filename: &str) -> String {
     fs::read_to_string(filename).unwrap_or_else(|_| {
         writeln!(io::stderr(), "Failed to read file {}", filename).unwrap();
         String::new()

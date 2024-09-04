@@ -3,8 +3,8 @@ use std::fmt;
 /// Represents a parsing error with a message and the line number where it occurred.
 #[derive(Debug, Clone)]
 pub struct ParserError {
-    line: usize,
-    message: String,
+    pub line: usize,
+    pub message: String,
 }
 
 /// Represents a runtime error with a message and the line number where it occurred.

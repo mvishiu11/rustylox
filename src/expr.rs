@@ -39,13 +39,12 @@ pub struct LogicalExpr {
     pub right: Expr,
 }
 
-#[allow(dead_code)]
 impl Expr {
     pub fn pretty_print(&self) -> String {
         self.pretty_print_with_indent(0)
     }
 
-    fn pretty_print_with_indent(&self, indent: usize) -> String {
+    pub fn pretty_print_with_indent(&self, indent: usize) -> String {
         let indentation = " ".repeat(indent * 2);
         match self {
             Expr::Binary(expr) => format!(

@@ -3,7 +3,8 @@ use std::rc::Rc;
 use std::env;
 use std::io::{self, Write};
 use rustylox::environ::Environment;
-use rustylox::{run_interpret, run_parse, run_tokenize, lexer::Lexer, parser};
+use rustylox::stmt::pretty_print_program;
+use rustylox::{run_interpret, read_file, run_tokenize, lexer::Lexer, parser, parser::Parser};
 use rustylox::interpreter;
 
 const TOKENIZE: &str = "tokenize";
@@ -29,7 +30,15 @@ fn main() {
 
     match command.as_str() {
         TOKENIZE => run_tokenize(filename),
-        PARSE => run_parse(filename),
+        PARSE => {
+            let file_contents = read_file(filename);
+            let mut lexer = Lexer::new(file_contents.to_string());
+            let tokens = lexer.tokenize();
+            let mut parser = Parser::new(tokens.to_vec());
+            let (statements, errors) = parser.parse();
+            let parsed = pretty_print_program((statements, errors));
+            print!("{}", parsed);
+        }
         INTERPRET => run_interpret(filename),
         CLI => {
             println!("✨ Program logs will be displayed here. Stay tuned!");
