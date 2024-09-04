@@ -1,3 +1,5 @@
+use std::cell::RefCell;
+use std::rc::Rc;
 use std::env;
 use std::io::{self, Write};
 use rustylox::environ::Environment;
@@ -33,7 +35,7 @@ fn main() {
             println!("✨ Program logs will be displayed here. Stay tuned!");
 
             let mut input = String::new();
-            let mut cli_environ = Environment::new();
+            let cli_environ = Rc::new(RefCell::new(Environment::new()));
             loop {
                 print!("> ");
                 io::stdout().flush().unwrap();
@@ -50,7 +52,7 @@ fn main() {
                 let output = if !errors.is_empty() {
                     errors.into_iter().map(|e| e.to_string()).collect::<Vec<_>>().join("\n")
                 } else {
-                    match interpreter::interpret_with_env(&statements, Some(&mut cli_environ)) {
+                    match interpreter::interpret_with_env(&statements, Some(cli_environ.clone())) {
                         Ok(output) => output,
                         Err(e) => e.to_string(),
                     }

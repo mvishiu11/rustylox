@@ -56,9 +56,10 @@ impl Parser {
     fn statement(&mut self) -> Result<Stmt, ParserError> {
         if self.match_token(&[TokenType::If]) {
             self.if_statement()
-        }
-        else if self.match_token(&[TokenType::Print]) {
+        } else if self.match_token(&[TokenType::Print]) {
             self.print_statement()
+        } else if self.match_token(&[TokenType::While]) { 
+            self.while_statement()
         } else if self.match_token(&[TokenType::LeftBrace]) {
             self.block()
         } else if self.match_token(&[TokenType::Var]) {
@@ -89,6 +90,17 @@ impl Parser {
         let value = self.expression()?;
         self.consume(TokenType::Semicolon, "Expect ';' after value.")?;
         Ok(Stmt::Print(value))
+    }
+
+    /// Parse a while statement.
+    fn while_statement(&mut self) -> Result<Stmt, ParserError> {
+        self.consume(TokenType::LeftParen, "Expect '(' after 'while'.")?;
+        let condition = self.expression()?;
+        self.consume(TokenType::RightParen, "Expect ')' after condition.")?;
+    
+        let body = Box::new(self.statement()?);
+    
+        Ok(Stmt::While(condition, body))
     }
 
     /// Parse a block of statements.

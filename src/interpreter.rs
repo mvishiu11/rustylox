@@ -1,4 +1,5 @@
-use std::error::Error;
+use std::cell::RefCell;
+use std::{error::Error, rc::Rc};
 use std::fmt::Write;
 use crate::{error::EvalError, expr::{Expr, LiteralExpr}, stmt::Stmt, token::TokenType};
 use crate::environ::Environment;
@@ -9,28 +10,62 @@ pub fn interpret(statements: &[Stmt]) -> Result<String, EvalError> {
     interpret_with_env(statements, None)
 }
 
-pub fn interpret_with_env(statements: &[Stmt], environ: Option<&mut Environment>) -> Result<String, EvalError> {
-    let mut clean_environ = Environment::new();
-    let mut environment = environ.unwrap_or(&mut clean_environ);
+pub fn interpret_with_env(statements: &[Stmt], environ: Option<Rc<RefCell<Environment>>>) -> Result<String, EvalError> {
+    let environment = environ.unwrap_or_else(|| Rc::new(RefCell::new(Environment::new())));
     let mut output = String::new();
+
     for statement in statements {
-        execute(statement, &mut environment, &mut output)?;
+        execute(statement, environment.clone(), &mut output)?; // Cloning the Rc, not the Environment
     }
+
     Ok(output)
 }
 
-fn execute(stmt: &Stmt, environment: &mut Environment, output: &mut String) -> Result<(), EvalError> {
+fn execute(stmt: &Stmt, environment: Rc<RefCell<Environment>>, output: &mut String) -> Result<(), EvalError> {
     match stmt {
+        // While loop, sharing environment reference
+        Stmt::While(condition, body) => {
+            while {
+                let condition_value = evaluate(condition, environment.clone())?;
+                if let Expr::Literal(LiteralExpr::Boolean(b)) = condition_value {
+                    b
+                } else {
+                    return Err(EvalError::TypeError("While condition must be a boolean".to_string()));
+                }
+            } {
+                execute(&*body, environment.clone(), output)?;
+            }
+        }
+        // Block statement, sharing environment reference
+        Stmt::Block(statements) => {
+            let new_env = Rc::new(RefCell::new(Environment::new_enclosed(environment.clone())));
+            for statement in statements {
+                execute(statement, new_env.clone(), output)?;
+            }
+        }
+        // Variable declaration, modifying shared environment
+        Stmt::Var(name, initializer) => {
+            let value = if let Some(expr) = initializer {
+                evaluate(expr, environment.clone())?
+            } else {
+                Expr::Literal(LiteralExpr::Nil)
+            };
+
+            if let Expr::Literal(literal_value) = value {
+                environment.borrow_mut().define(name.clone(), literal_value);
+            }
+        }
         Stmt::Expression(expr) => {
             evaluate(expr, environment)?;
         }
         Stmt::If(condition, then_branch, else_branch) => {
-            let condition_value = evaluate(condition, environment)?;
+            let condition_value = evaluate(condition, environment.clone())?;
+        
             if let Expr::Literal(LiteralExpr::Boolean(b)) = condition_value {
                 if b {
-                    execute(&*then_branch, environment, output)?;
+                    execute(&*then_branch, environment.clone(), output)?;
                 } else if let Some(else_branch) = else_branch {
-                    execute(&*else_branch, environment, output)?;
+                    execute(&*else_branch, environment.clone(), output)?;
                 }
             } else {
                 return Err(EvalError::TypeError("If condition must be a boolean".to_string()));
@@ -50,35 +85,16 @@ fn execute(stmt: &Stmt, environment: &mut Environment, output: &mut String) -> R
                 _ => return Err(EvalError::TypeError("Invalid expression type in print statement".to_string())),
             }
         }
-        Stmt::Block(statements) => {
-            let mut block_environment = Environment::new_enclosed(environment.clone());
-            for statement in statements {
-                execute(statement, &mut block_environment, output)?;
-            }
-        }
-        Stmt::Var(name, initializer) => {
-            let value = if let Some(expr) = initializer {
-                evaluate(expr, environment)?
-            } else {
-                Expr::Literal(LiteralExpr::Nil)
-            };
-
-            // Define the variable in the environment
-            if let Expr::Literal(literal_value) = value {
-                environment.define(name.clone(), literal_value);
-            }
-        }
-        _ => return Err(EvalError::SyntaxError("Unknown statement type".to_string())),
     }
     Ok(())
 }
 
-/// Evaluate an expression and return the result.
-pub fn evaluate(expr: &Expr, environment: &mut Environment) -> Result<Expr, EvalError> {
+/// Main evaluation function for expressions
+pub fn evaluate(expr: &Expr, environment: Rc<RefCell<Environment>>) -> Result<Expr, EvalError> {
     match expr {
         Expr::Literal(literal) => Ok(Expr::Literal(literal.clone())),
         Expr::Unary(unary) => {
-            let right = evaluate(&unary.right, environment)?;
+            let right = evaluate(&unary.right, environment.clone())?;
             match right {
                 Expr::Literal(LiteralExpr::Number(n)) => match unary.operator.token_type {
                     TokenType::Minus => Ok(Expr::Literal(LiteralExpr::Number(-n))),
@@ -93,8 +109,8 @@ pub fn evaluate(expr: &Expr, environment: &mut Environment) -> Result<Expr, Eval
             }
         },
         Expr::Binary(binary) => {
-            let left = evaluate(&binary.left, environment)?;
-            let right = evaluate(&binary.right, environment)?;
+            let left = evaluate(&binary.left, environment.clone())?;
+            let right = evaluate(&binary.right, environment.clone())?;
             match (left, right) {
                 (Expr::Literal(LiteralExpr::Number(l)), Expr::Literal(LiteralExpr::Number(r))) => match binary.operator.token_type {
                     TokenType::Plus => Ok(Expr::Literal(LiteralExpr::Number(l + r))),
@@ -128,24 +144,22 @@ pub fn evaluate(expr: &Expr, environment: &mut Environment) -> Result<Expr, Eval
                 _ => Err(EvalError::TypeError("Operands must be compatible for the operation".to_string())),
             }
         },
-        Expr::Grouping(grouping) => evaluate(&**grouping, environment),
+        Expr::Grouping(grouping) => evaluate(&**grouping, environment.clone()),
         Expr::Variable(name) => {
-            let value = environment.get(&name);
-            match value {
+            match environment.borrow().get(&name) {
                 Ok(literal) => Ok(Expr::Literal(literal)),
                 Err(e) => Err(e),
             }
         },
         Expr::Assign(name, expr) => {
-            let value = evaluate(&expr, environment)?;
+            let value = evaluate(&expr, environment.clone())?;
             if let Expr::Literal(ref literal) = value {
-                environment.assign(&name.clone(), literal.clone())?;
+                environment.borrow_mut().assign(name, literal.clone())?;
             }
             Ok(value)
         },
-        // Logical operators - truthiness is defined in the same way as in Java
         Expr::Logical(logical) => {
-            let left = evaluate(&logical.left, environment)?;
+            let left = evaluate(&logical.left, environment.clone())?;
             if logical.operator.token_type == TokenType::Or {
                 if is_truthy(&left) {
                     return Ok(left);
@@ -155,7 +169,7 @@ pub fn evaluate(expr: &Expr, environment: &mut Environment) -> Result<Expr, Eval
                     return Ok(left);
                 }
             }
-            evaluate(&logical.right, environment)
+            evaluate(&logical.right, environment.clone())
         },
     }
 }
