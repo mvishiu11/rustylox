@@ -104,11 +104,14 @@ impl Parser {
         self.consume(TokenType::RightParen, "Expect ')' after for clauses.")?;
     
         let mut body = self.statement()?;
-    
+
         if let Some(increment) = increment {
-            body = Stmt::Block(vec![body, Stmt::Expression(increment)]);
+            body = Stmt::Block(vec![
+                body,
+                Stmt::Expression(increment.clone()),
+            ]);
         }
-    
+
         body = Stmt::While(condition, Box::new(body));
     
         if let Some(initializer) = initializer {
@@ -116,7 +119,7 @@ impl Parser {
         }
     
         Ok(body)
-    }
+    }    
 
     /// Parse an if statement.
     fn if_statement(&mut self) -> Result<Stmt, ParserError> {
