@@ -14,6 +14,12 @@ pub struct RuntimeError {
     pub line: usize,
 }
 
+#[derive(Debug, Clone)]
+pub enum ControlFlow {
+    Break,
+    Continue,
+}
+
 impl ParserError {
     /// Create a new ParserError.
     pub fn new(line: usize, message: String) -> Self {
@@ -29,6 +35,7 @@ pub enum EvalError {
     UndefinedVariable(String),
     TypeError(String),
     SyntaxError(String),
+    ControlFlow(ControlFlow),
 }
 
 impl fmt::Display for EvalError {

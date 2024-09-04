@@ -57,6 +57,7 @@ impl Lexer {
             '+' => self.add_token(TokenType::Plus),
             ';' => self.add_token(TokenType::Semicolon),
             '*' => self.add_token(TokenType::Star),
+            '%' => self.add_token(TokenType::Percent),
             '!' => {
                 let token_type = if self.match_next('=') {
                     TokenType::BangEqual
@@ -222,6 +223,8 @@ impl Lexer {
             "true" => TokenType::True,
             "var" => TokenType::Var,
             "while" => TokenType::While,
+            "break" => TokenType::Break,
+            "continue" => TokenType::Continue,
             _ => TokenType::Identifier,
         };
 

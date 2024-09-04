@@ -5,6 +5,7 @@ pub enum TokenType {
     LeftBrace, RightBrace,
     Comma, Dot, Minus, Plus,
     Semicolon, Slash, Star,
+    Percent,
 
     // One or two character tokens.
     Bang, BangEqual,
@@ -18,6 +19,7 @@ pub enum TokenType {
     // Keywords.
     And, Class, Else, False, Fun, For, If, Nil, Or,
     Print, Return, Super, This, True, Var, While,
+    Break, Continue,
 
     // End of file.
     Eof,
