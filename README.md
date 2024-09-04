@@ -334,6 +334,14 @@ In this case you'll see:
 
 1. **Enjoy**: Sit back, relax, and watch as RustyLox does its magic.
 
+**Note** As of 03/09/2024 [live playground](https://mvishiu11.github.io/rustylox-playground/) is available! It uses Rust bindings through Web Assembly, which can be generated in this repo via `wasm-pack` as such:
+
+```bash
+wasm-pack build --target web
+```
+
+If you do not know what this means, don't worry about it! This note is mostly for using this interpreter in web-based settings.
+
 ## 🤝 **Contributing**
 
 Got ideas? Found a bug? Want to add a feature? We’re all ears. Just make sure your code is as polished as your wit.
