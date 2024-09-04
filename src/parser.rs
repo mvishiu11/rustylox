@@ -54,7 +54,9 @@ impl Parser {
 
     /// Parse a single statement.
     fn statement(&mut self) -> Result<Stmt, ParserError> {
-        if self.match_token(&[TokenType::If]) {
+        if self.match_token(&[TokenType::For]) {
+            self.for_statement()
+        } else if self.match_token(&[TokenType::If]) {
             self.if_statement()
         } else if self.match_token(&[TokenType::Print]) {
             self.print_statement()
@@ -64,9 +66,56 @@ impl Parser {
             self.block()
         } else if self.match_token(&[TokenType::Var]) {
             self.var_declaration()
+        } else if self.match_token(&[TokenType::Break]) {
+            self.consume(TokenType::Semicolon, "Expect ';' after 'break'.")?;
+            Ok(Stmt::Break)
+        } else if self.match_token(&[TokenType::Continue]) {
+            self.consume(TokenType::Semicolon, "Expect ';' after 'continue'.")?;
+            Ok(Stmt::Continue)
         } else {
             self.expression_statement()
         }
+    }
+
+    /// Parse a for statement.
+    fn for_statement(&mut self) -> Result<Stmt, ParserError> {
+        self.consume(TokenType::LeftParen, "Expect '(' after 'for'.")?;
+    
+        let initializer = if self.match_token(&[TokenType::Semicolon]) {
+            None
+        } else if self.match_token(&[TokenType::Var]) {
+            Some(self.var_declaration()?)
+        } else {
+            Some(self.expression_statement()?)
+        };
+    
+        let condition = if !self.check(TokenType::Semicolon) {
+            self.expression()?
+        } else {
+            Expr::Literal(LiteralExpr::Boolean(true))
+        };
+        self.consume(TokenType::Semicolon, "Expect ';' after loop condition.")?;
+    
+        let increment = if !self.check(TokenType::RightParen) {
+            Some(self.expression()?)
+        } else {
+            None
+        };
+        self.consume(TokenType::RightParen, "Expect ')' after for clauses.")?;
+    
+        let mut body = self.statement()?;
+    
+        if let Some(increment) = increment {
+            body = Stmt::Block(vec![body, Stmt::Expression(increment)]);
+        }
+    
+        body = Stmt::While(condition, Box::new(body));
+    
+        if let Some(initializer) = initializer {
+            body = Stmt::Block(vec![initializer, body]);
+        }
+    
+        Ok(body)
     }
 
     /// Parse an if statement.
@@ -307,7 +356,7 @@ impl Parser {
     fn factor(&mut self) -> Result<Expr, ParserError> {
         let mut expr = self.unary()?;
 
-        while self.match_token(&[TokenType::Star, TokenType::Slash]) {
+        while self.match_token(&[TokenType::Star, TokenType::Slash, TokenType::Percent]) {
             let operator = self.previous().clone();
             let right = self.unary()?;
             expr = Expr::Binary(Box::new(BinaryExpr { left: expr, operator, right }));

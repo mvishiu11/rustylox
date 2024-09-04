@@ -2,6 +2,7 @@ use std::cell::RefCell;
 use std::{error::Error, rc::Rc};
 use std::fmt::Write;
 use crate::{error::EvalError, expr::{Expr, LiteralExpr}, stmt::Stmt, token::TokenType};
+use crate::error::ControlFlow;
 use crate::environ::Environment;
 
 impl Error for EvalError {}
@@ -23,7 +24,6 @@ pub fn interpret_with_env(statements: &[Stmt], environ: Option<Rc<RefCell<Enviro
 
 fn execute(stmt: &Stmt, environment: Rc<RefCell<Environment>>, output: &mut String) -> Result<(), EvalError> {
     match stmt {
-        // While loop, sharing environment reference
         Stmt::While(condition, body) => {
             while {
                 let condition_value = evaluate(condition, environment.clone())?;
@@ -33,28 +33,27 @@ fn execute(stmt: &Stmt, environment: Rc<RefCell<Environment>>, output: &mut Stri
                     return Err(EvalError::TypeError("While condition must be a boolean".to_string()));
                 }
             } {
-                execute(&*body, environment.clone(), output)?;
+                match execute(&*body, environment.clone(), output) {
+                    Ok(()) => (),
+                    Err(EvalError::ControlFlow(ControlFlow::Break)) => break,
+                    Err(EvalError::ControlFlow(ControlFlow::Continue)) => continue,
+                    Err(e) => return Err(e),
+                }
             }
         }
-        // Block statement, sharing environment reference
         Stmt::Block(statements) => {
             let new_env = Rc::new(RefCell::new(Environment::new_enclosed(environment.clone())));
             for statement in statements {
-                execute(statement, new_env.clone(), output)?;
+                match execute(statement, new_env.clone(), output) {
+                    Ok(()) => (),
+                    Err(EvalError::ControlFlow(ControlFlow::Break)) => return Err(EvalError::ControlFlow(ControlFlow::Break)),
+                    Err(EvalError::ControlFlow(ControlFlow::Continue)) => return Err(EvalError::ControlFlow(ControlFlow::Continue)),
+                    Err(e) => return Err(e),
+                }
             }
         }
-        // Variable declaration, modifying shared environment
-        Stmt::Var(name, initializer) => {
-            let value = if let Some(expr) = initializer {
-                evaluate(expr, environment.clone())?
-            } else {
-                Expr::Literal(LiteralExpr::Nil)
-            };
-
-            if let Expr::Literal(literal_value) = value {
-                environment.borrow_mut().define(name.clone(), literal_value);
-            }
-        }
+        Stmt::Break => return Err(EvalError::ControlFlow(ControlFlow::Break)),
+        Stmt::Continue => return Err(EvalError::ControlFlow(ControlFlow::Continue)),
         Stmt::Expression(expr) => {
             evaluate(expr, environment)?;
         }
@@ -83,6 +82,17 @@ fn execute(stmt: &Stmt, environment: Rc<RefCell<Environment>>, output: &mut Stri
                     }
                 },
                 _ => return Err(EvalError::TypeError("Invalid expression type in print statement".to_string())),
+            }
+        }
+        Stmt::Var(name, initializer) => {
+            let value = if let Some(expr) = initializer {
+                evaluate(expr, environment.clone())?
+            } else {
+                Expr::Literal(LiteralExpr::Nil)
+            };
+
+            if let Expr::Literal(literal_value) = value {
+                environment.borrow_mut().define(name.clone(), literal_value);
             }
         }
     }
@@ -120,6 +130,11 @@ pub fn evaluate(expr: &Expr, environment: Rc<RefCell<Environment>>) -> Result<Ex
                         Err(EvalError::DivisionByZero)
                     } else {
                         Ok(Expr::Literal(LiteralExpr::Number(l / r)))
+                    },
+                    TokenType::Percent => if r == 0.0 {
+                        Err(EvalError::DivisionByZero)
+                    } else {
+                        Ok(Expr::Literal(LiteralExpr::Number(l % r)))
                     },
                     TokenType::EqualEqual => Ok(Expr::Literal(LiteralExpr::Boolean(l == r))),
                     TokenType::BangEqual => Ok(Expr::Literal(LiteralExpr::Boolean(l != r))),
