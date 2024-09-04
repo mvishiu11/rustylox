@@ -1,7 +1,6 @@
 use crate::expr::Expr;
 
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 pub enum Stmt {
     Expression(Expr),
     Print(Expr),
