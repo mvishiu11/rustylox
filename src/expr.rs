@@ -1,4 +1,6 @@
-use crate::token::Token;
+use std::rc::Rc;
+
+use crate::{callable::LoxFunction, token::Token};
 
 #[derive(Debug, Clone)]
 pub enum Expr {
@@ -9,6 +11,7 @@ pub enum Expr {
     Variable(Token),
     Assign(Token, Box<Expr>),
     Logical(Box<LogicalExpr>),
+    Call(Box<CallExpr>),
 }
 
 #[derive(Debug, Clone)]
@@ -29,6 +32,7 @@ pub enum LiteralExpr {
     Number(f64),
     String(String),
     Boolean(bool),
+    Callable(Rc<LoxFunction>),
     Nil
 }
 
@@ -38,6 +42,14 @@ pub struct LogicalExpr {
     pub operator: Token,
     pub right: Expr,
 }
+
+#[derive(Debug, Clone)]
+pub struct CallExpr {
+    pub callee: Expr,
+    pub paren: Token,
+    pub arguments: Vec<Expr>,
+}
+
 
 impl Expr {
     pub fn pretty_print(&self) -> String {
@@ -66,6 +78,7 @@ impl Expr {
                 LiteralExpr::Number(n) => format!("{}Number ({})", indentation, n),
                 LiteralExpr::String(s) => format!("{}String ({})", indentation, s),
                 LiteralExpr::Boolean(b) => format!("{}Boolean ({})", indentation, b),
+                LiteralExpr::Callable(func) => format!("{}Callable ({})", indentation, func.name),
                 LiteralExpr::Nil => format!("{}Nil", indentation),
             },
             Expr::Unary(expr) => format!(
@@ -92,6 +105,21 @@ impl Expr {
                 indentation,
                 expr.right.pretty_print_with_indent(indent + 1)
             ),
+            Expr::Call(expr) => {
+                let mut pretty_arguments = String::new();
+                for argument in &expr.arguments {
+                    pretty_arguments.push_str(&argument.pretty_print_with_indent(indent + 1));
+                }
+                format!(
+                    "{}CallExpression\n{}├── {}\n{}└── Arguments\n{}{}",
+                    indentation,
+                    indentation,
+                    expr.callee.pretty_print_with_indent(indent + 1),
+                    indentation,
+                    pretty_arguments,
+                    indentation
+                )
+            }
         }
     }
 }
