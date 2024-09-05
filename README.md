@@ -85,7 +85,11 @@ term         = factor { ( "-" | "+" ) factor } ;
 factor       = unary { ( "/" | "*" | "%" ) unary } ;
 
 unary        = ( "!" | "-" ) unary
-             | primary ;
+             | call ;
+
+call         = primary, { "(", [ arguments ], ")" } ;
+
+arguments    = expression, { ",", expression } ;
 
 primary      = NUMBER 
              | STRING 
@@ -209,7 +213,7 @@ Welcome to the world of parsing, where we turn our neatly categorized tokens int
 
 **Example**
 
-For the simpler *test.lox* file (since for now we only support parsing arithmetic):
+For the simpler *test_parse_arithmetic.lox* file (to make the graph easy to understand):
 
 ```js
 // Simple arithmetic
@@ -299,8 +303,7 @@ The output would be:
 
 Here’s where we’re headed next:
 
-1. **Interpretation**: Implement the execution of Lox code based on the AST.
-1. **REPL Support**: Introduce a Read-Eval-Print Loop for real-time Lox code interpretation.
+1. **Additional features** Add more features to the language.
 1. **Optimization**: Enhance performance to achieve even faster execution times.
 1. **Extended Error Messages**: Provide detailed and descriptive error messages to improve debugging.
 
