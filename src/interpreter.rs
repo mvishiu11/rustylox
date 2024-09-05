@@ -1,6 +1,7 @@
 use std::cell::RefCell;
 use std::{error::Error, rc::Rc};
 use std::fmt::Write;
+use crate::callable::{LoxCallable, LoxFunction};
 use crate::{error::EvalError, expr::{Expr, LiteralExpr}, stmt::Stmt, token::TokenType};
 use crate::error::ControlFlow;
 use crate::environ::Environment;
@@ -78,6 +79,7 @@ fn execute(stmt: &Stmt, environment: Rc<RefCell<Environment>>, output: &mut Stri
                         LiteralExpr::Number(n) => writeln!(output, "{}", n).unwrap(),
                         LiteralExpr::String(s) => writeln!(output, "{}", s).unwrap(),
                         LiteralExpr::Boolean(b) => writeln!(output, "{}", b).unwrap(),
+                        LiteralExpr::Callable(callable) => writeln!(output, "{:?}", callable).unwrap(),
                         LiteralExpr::Nil => writeln!(output, "nil").unwrap(),
                     }
                 },
@@ -95,6 +97,17 @@ fn execute(stmt: &Stmt, environment: Rc<RefCell<Environment>>, output: &mut Stri
                 environment.borrow_mut().define(name.clone(), literal_value);
             }
         }
+        Stmt::Function(name, params, body) => {
+            let function = LoxFunction::new(name.clone(), params.clone(), body.clone(), environment.clone());
+            environment.borrow_mut().define(name.clone(), LiteralExpr::Callable(Rc::new(function)));
+        }
+        Stmt::Return(Some(expr)) => {
+            let value = evaluate(expr, environment.clone())?;
+            return Err(EvalError::ControlFlow(ControlFlow::Return(value)));
+        },
+        Stmt::Return(None) => {
+            return Err(EvalError::ControlFlow(ControlFlow::Return(Expr::Literal(LiteralExpr::Nil))));
+        },        
     }
     Ok(())
 }
@@ -186,6 +199,28 @@ pub fn evaluate(expr: &Expr, environment: Rc<RefCell<Environment>>) -> Result<Ex
             }
             evaluate(&logical.right, environment.clone())
         },
+        Expr::Call(call_expr) => {
+            let callee = evaluate(&call_expr.callee, environment.clone())?;
+            let mut arguments = Vec::new();
+        
+            for arg in &call_expr.arguments {
+                let value = match evaluate(arg, environment.clone())? {
+                    Expr::Literal(literal) => literal,
+                    _ => return Err(EvalError::TypeError("Invalid argument type".to_string())),
+                };
+                arguments.push(value);
+            }
+        
+            match callee {
+                Expr::Literal(LiteralExpr::Callable(callable)) => {
+                    if arguments.len() != callable.arity() {
+                        return Err(EvalError::ArityError(callable.arity(), arguments.len()));
+                    }
+                    callable.call(arguments, environment.clone())
+                },
+                _ => Err(EvalError::TypeError("Can only call functions and classes".to_string())),
+            }
+        }        
     }
 }
 
