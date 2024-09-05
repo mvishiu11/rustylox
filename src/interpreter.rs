@@ -1,15 +1,18 @@
 use std::cell::RefCell;
 use std::{error::Error, rc::Rc};
 use std::fmt::Write;
-use crate::callable::{LoxCallable, LoxFunction};
+use crate::callable::LoxFunction;
 use crate::{error::EvalError, expr::{Expr, LiteralExpr}, stmt::Stmt, token::TokenType};
 use crate::error::ControlFlow;
 use crate::environ::Environment;
+use crate::natives::define_native_functions;
 
 impl Error for EvalError {}
 
 pub fn interpret(statements: &[Stmt]) -> Result<String, EvalError> {
-    interpret_with_env(statements, None)
+    let globals = Rc::new(RefCell::new(Environment::new()));
+    define_native_functions(&mut globals.borrow_mut());
+    interpret_with_env(statements, Some(globals))
 }
 
 pub fn interpret_with_env(statements: &[Stmt], environ: Option<Rc<RefCell<Environment>>>) -> Result<String, EvalError> {
