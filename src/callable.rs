@@ -1,4 +1,5 @@
 use std::cell::RefCell;
+use std::fmt;
 use std::rc::Rc;
 
 use crate::environ::Environment;
@@ -6,6 +7,7 @@ use crate::error::{ControlFlow, EvalError};
 use crate::expr::{Expr, LiteralExpr};
 use crate::interpreter::interpret_with_env;
 use crate::stmt::Stmt;
+use std::fmt::Debug;
 
 #[derive(Clone, Debug)]
 pub struct LoxFunction {
@@ -23,6 +25,7 @@ impl LoxFunction {
 
 pub trait LoxCallable {
     fn arity(&self) -> usize;
+    fn name(&self) -> &str;
     fn call(
         &self,
         arguments: Vec<LiteralExpr>, 
@@ -30,9 +33,19 @@ pub trait LoxCallable {
     ) -> Result<Expr, EvalError>;
 }
 
+impl Debug for dyn LoxCallable {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Callable({})", self.name())
+    }
+}
+
 impl LoxCallable for LoxFunction {
     fn arity(&self) -> usize {
         self.params.len()
+    }
+
+    fn name(&self) -> &str {
+        &self.name
     }
 
     fn call(
@@ -54,5 +67,40 @@ impl LoxCallable for LoxFunction {
             Err(EvalError::ControlFlow(ControlFlow::Return(value))) => Ok(value),  // Handle return
             Err(e) => Err(e),
         }
+    }
+}
+
+pub struct NativeFunction {
+    name: String,
+    arity: usize,
+    function: fn(Vec<LiteralExpr>) -> Result<LiteralExpr, EvalError>,  // Native function signature
+}
+
+impl NativeFunction {
+    pub fn new(name: &str, arity: usize, function: fn(Vec<LiteralExpr>) -> Result<LiteralExpr, EvalError>) -> Self {
+        NativeFunction {
+            name: name.to_string(),
+            arity,
+            function,
+        }
+    }
+}
+
+impl LoxCallable for NativeFunction {
+    fn arity(&self) -> usize {
+        self.arity
+    }
+
+    fn name(&self) -> &str {
+        &self.name
+    }
+
+    fn call(
+        &self, 
+        arguments: Vec<LiteralExpr>, 
+        _environment: Rc<RefCell<Environment>>
+    ) -> Result<Expr, EvalError> {
+        let result = (self.function)(arguments)?;
+        Ok(Expr::Literal(result))
     }
 }

@@ -1,6 +1,7 @@
-use std::rc::Rc;
+use std::{fmt, rc::Rc};
 
-use crate::{callable::LoxFunction, token::Token};
+use crate::{callable::LoxCallable, token::Token};
+use std::fmt::Debug;
 
 #[derive(Debug, Clone)]
 pub enum Expr {
@@ -27,13 +28,25 @@ pub struct UnaryExpr {
     pub right: Expr,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub enum LiteralExpr {
     Number(f64),
     String(String),
     Boolean(bool),
-    Callable(Rc<LoxFunction>),
+    Callable(Rc<dyn LoxCallable>),
     Nil
+}
+
+impl Debug for LiteralExpr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            LiteralExpr::Number(n) => write!(f, "Number({})", n),
+            LiteralExpr::String(s) => write!(f, "String(\"{}\")", s),
+            LiteralExpr::Boolean(b) => write!(f, "Boolean({})", b),
+            LiteralExpr::Callable(_) => write!(f, "Callable(<function>)"),
+            LiteralExpr::Nil => write!(f, "Nil"),
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -78,7 +91,7 @@ impl Expr {
                 LiteralExpr::Number(n) => format!("{}Number ({})", indentation, n),
                 LiteralExpr::String(s) => format!("{}String ({})", indentation, s),
                 LiteralExpr::Boolean(b) => format!("{}Boolean ({})", indentation, b),
-                LiteralExpr::Callable(func) => format!("{}Callable ({})", indentation, func.name),
+                LiteralExpr::Callable(func) => format!("{}Callable ({})", indentation, func.name()),
                 LiteralExpr::Nil => format!("{}Nil", indentation),
             },
             Expr::Unary(expr) => format!(
