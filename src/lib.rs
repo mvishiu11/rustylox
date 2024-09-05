@@ -1,3 +1,4 @@
+use resolver::Resolver;
 use wasm_bindgen::prelude::*;
 use lexer::Lexer;
 use parser::Parser;
@@ -14,6 +15,7 @@ pub mod environ;
 pub mod interpreter;
 pub mod callable;
 pub mod natives;
+pub mod resolver;
 
 #[wasm_bindgen]
 pub fn tokenize(file_contents: &str) -> String {
@@ -42,11 +44,13 @@ pub fn interpret(file_contents: &str) -> String {
     let tokens = lexer.tokenize();
     let mut parser = Parser::new(tokens.to_vec());
     let (statements, errors) = parser.parse();
+    let mut resolver = Resolver::new();
+    resolver.resolve(&statements);
 
     if !errors.is_empty() {
         errors.iter().map(|e| e.to_string()).collect::<Vec<_>>().join("\n")
     } else {
-        match interpreter::interpret(&statements) {
+        match interpreter::interpret(&statements, &resolver) {
             Ok(output) => output,
             Err(e) => e.to_string(),
         }

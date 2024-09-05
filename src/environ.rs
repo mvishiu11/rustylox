@@ -54,4 +54,18 @@ impl Environment {
             }
         }
     }
+
+    pub fn get_at_depth(&self, name: &Token, depth: usize) -> Result<LiteralExpr, EvalError> {
+        let mut environment = Rc::new(RefCell::new(self.clone()));
+    
+        for _ in 0..depth {
+            let env = environment.clone();
+            environment = match &env.borrow().enclosing {
+                Some(enclosing) => enclosing.clone(),
+                None => return Err(EvalError::UndefinedVariable(name.lexeme.clone())),
+            };
+        }
+    
+        let temp = environment.borrow().get(name); temp
+    }    
 }

@@ -6,6 +6,7 @@ use crate::environ::Environment;
 use crate::error::{ControlFlow, EvalError};
 use crate::expr::{Expr, LiteralExpr};
 use crate::interpreter::interpret_with_env;
+use crate::resolver::Resolver;
 use crate::stmt::Stmt;
 use std::fmt::Debug;
 
@@ -30,6 +31,7 @@ pub trait LoxCallable {
         &self,
         arguments: Vec<LiteralExpr>, 
         environment: Rc<RefCell<Environment>>,
+        resolver: &Resolver,
         output : &mut String
     ) -> Result<Expr, EvalError>;
 }
@@ -53,6 +55,7 @@ impl LoxCallable for LoxFunction {
         &self, 
         arguments: Vec<LiteralExpr>, 
         _environment: Rc<RefCell<Environment>>,
+        _resolver: &Resolver,
         output: &mut String
     ) -> Result<Expr, EvalError> {
         let mut function_env = Environment::new_enclosed(self.closure.clone());
@@ -64,7 +67,7 @@ impl LoxCallable for LoxFunction {
 
         // Execute the function body and pass the output buffer
         let body_env = Rc::new(RefCell::new(function_env));
-        match interpret_with_env(&self.body, Some(body_env), output) {
+        match interpret_with_env(&self.body, Some(body_env), &_resolver, output) {
             Ok(_) => Ok(Expr::Literal(LiteralExpr::Nil)),
             Err(EvalError::ControlFlow(ControlFlow::Return(value))) => Ok(value),
             Err(e) => Err(e),
@@ -102,6 +105,7 @@ impl LoxCallable for NativeFunction {
         &self, 
         arguments: Vec<LiteralExpr>, 
         _environment: Rc<RefCell<Environment>>,
+        _resolver: &Resolver,
         _output : &mut String
     ) -> Result<Expr, EvalError> {
         let result = (self.function)(arguments)?;

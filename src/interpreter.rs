@@ -2,6 +2,7 @@ use std::cell::RefCell;
 use std::{error::Error, rc::Rc};
 use std::fmt::Write;
 use crate::callable::LoxFunction;
+use crate::resolver::Resolver;
 use crate::{error::EvalError, expr::{Expr, LiteralExpr}, stmt::Stmt, token::TokenType};
 use crate::error::ControlFlow;
 use crate::environ::Environment;
@@ -9,39 +10,40 @@ use crate::natives::define_native_functions;
 
 impl Error for EvalError {}
 
-pub fn interpret(statements: &[Stmt]) -> Result<String, EvalError> {
+pub fn interpret(statements: &[Stmt], resolver: &Resolver) -> Result<String, EvalError> {
     let globals = Rc::new(RefCell::new(Environment::new()));
     define_native_functions(&mut globals.borrow_mut());
     let mut output = String::new();
-    interpret_with_env(statements, Some(globals), &mut output)
+    interpret_with_env(statements, Some(globals), resolver, &mut output)
 }
 
 pub fn interpret_with_env(
     statements: &[Stmt], 
     environ: Option<Rc<RefCell<Environment>>>, 
+    resolver: &Resolver,
     output: &mut String
 ) -> Result<String, EvalError> {
     let environment = environ.unwrap_or_else(|| Rc::new(RefCell::new(Environment::new())));
 
     for statement in statements {
-        execute(statement, environment.clone(), output)?;
+        execute(statement, environment.clone(), resolver, output)?;
     }
 
     Ok(output.clone())
 }
 
-fn execute(stmt: &Stmt, environment: Rc<RefCell<Environment>>, output: &mut String) -> Result<(), EvalError> {
+fn execute(stmt: &Stmt, environment: Rc<RefCell<Environment>>, resolver: &Resolver, output: &mut String) -> Result<(), EvalError> {
     match stmt {
         Stmt::While(condition, body) => {
             while {
-                let condition_value = evaluate(condition, environment.clone(), output)?;
+                let condition_value = evaluate(condition, environment.clone(), resolver, output)?;
                 if let Expr::Literal(LiteralExpr::Boolean(b)) = condition_value {
                     b
                 } else {
                     return Err(EvalError::TypeError("While condition must be a boolean".to_string()));
                 }
             } {
-                match execute(&*body, environment.clone(), output) {
+                match execute(&*body, environment.clone(), resolver, output) {
                     Ok(()) => (),
                     Err(EvalError::ControlFlow(ControlFlow::Break)) => break,
                     Err(EvalError::ControlFlow(ControlFlow::Continue)) => continue,
@@ -52,7 +54,7 @@ fn execute(stmt: &Stmt, environment: Rc<RefCell<Environment>>, output: &mut Stri
         Stmt::Block(statements) => {
             let new_env = Rc::new(RefCell::new(Environment::new_enclosed(environment.clone())));
             for statement in statements {
-                match execute(statement, new_env.clone(), output) {
+                match execute(statement, new_env.clone(), resolver, output) {
                     Ok(()) => (),
                     Err(EvalError::ControlFlow(ControlFlow::Break)) => return Err(EvalError::ControlFlow(ControlFlow::Break)),
                     Err(EvalError::ControlFlow(ControlFlow::Continue)) => return Err(EvalError::ControlFlow(ControlFlow::Continue)),
@@ -63,16 +65,16 @@ fn execute(stmt: &Stmt, environment: Rc<RefCell<Environment>>, output: &mut Stri
         Stmt::Break => return Err(EvalError::ControlFlow(ControlFlow::Break)),
         Stmt::Continue => return Err(EvalError::ControlFlow(ControlFlow::Continue)),
         Stmt::Expression(expr) => {
-            evaluate(expr, environment, output)?;
+            evaluate(expr, environment, resolver, output)?;
         }
         Stmt::If(condition, then_branch, else_branch) => {
-            let condition_value = evaluate(condition, environment.clone(), output)?;
+            let condition_value = evaluate(condition, environment.clone(), resolver, output)?;
         
             if let Expr::Literal(LiteralExpr::Boolean(b)) = condition_value {
                 if b {
-                    execute(&*then_branch, environment.clone(), output)?;
+                    execute(&*then_branch, environment.clone(), resolver, output)?;
                 } else if let Some(else_branch) = else_branch {
-                    execute(&*else_branch, environment.clone(), output)?;
+                    execute(&*else_branch, environment.clone(), resolver, output)?;
                 }
             } else {
                 return Err(EvalError::TypeError("If condition must be a boolean".to_string()));
@@ -83,14 +85,14 @@ fn execute(stmt: &Stmt, environment: Rc<RefCell<Environment>>, output: &mut Stri
             environment.borrow_mut().define(name.clone(), LiteralExpr::Callable(Rc::new(function)));
         }
         Stmt::Return(Some(expr)) => {
-            let value = evaluate(expr, environment.clone(), output)?;
+            let value = evaluate(expr, environment.clone(), resolver, output)?;
             return Err(EvalError::ControlFlow(ControlFlow::Return(value)));
         },
         Stmt::Return(None) => {
             return Err(EvalError::ControlFlow(ControlFlow::Return(Expr::Literal(LiteralExpr::Nil))));
         },    
         Stmt::Print(expr) => {
-            let value = evaluate(expr, environment, output)?;
+            let value = evaluate(expr, environment, resolver, output)?;
             match value {
                 Expr::Literal(literal) => {
                     match literal {
@@ -106,7 +108,7 @@ fn execute(stmt: &Stmt, environment: Rc<RefCell<Environment>>, output: &mut Stri
         }
         Stmt::Var(name, initializer) => {
             let value = if let Some(expr) = initializer {
-                evaluate(expr, environment.clone(), output)?
+                evaluate(expr, environment.clone(), resolver, output)?
             } else {
                 Expr::Literal(LiteralExpr::Nil)
             };
@@ -120,11 +122,11 @@ fn execute(stmt: &Stmt, environment: Rc<RefCell<Environment>>, output: &mut Stri
 }
 
 /// Main evaluation function for expressions
-pub fn evaluate(expr: &Expr, environment: Rc<RefCell<Environment>>, output: &mut String) -> Result<Expr, EvalError> {
+pub fn evaluate(expr: &Expr, environment: Rc<RefCell<Environment>>, resolver: &Resolver, output: &mut String) -> Result<Expr, EvalError> {
     match expr {
         Expr::Literal(literal) => Ok(Expr::Literal(literal.clone())),
         Expr::Unary(unary) => {
-            let right = evaluate(&unary.right, environment.clone(), output)?;
+            let right = evaluate(&unary.right, environment.clone(), resolver, output)?;
             match right {
                 Expr::Literal(LiteralExpr::Number(n)) => match unary.operator.token_type {
                     TokenType::Minus => Ok(Expr::Literal(LiteralExpr::Number(-n))),
@@ -139,8 +141,8 @@ pub fn evaluate(expr: &Expr, environment: Rc<RefCell<Environment>>, output: &mut
             }
         },
         Expr::Binary(binary) => {
-            let left = evaluate(&binary.left, environment.clone(), output)?;
-            let right = evaluate(&binary.right, environment.clone(), output)?;
+            let left = evaluate(&binary.left, environment.clone(), resolver, output)?;
+            let right = evaluate(&binary.right, environment.clone(), resolver, output)?;
             match (left, right) {
                 (Expr::Literal(LiteralExpr::Number(l)), Expr::Literal(LiteralExpr::Number(r))) => match binary.operator.token_type {
                     TokenType::Plus => Ok(Expr::Literal(LiteralExpr::Number(l + r))),
@@ -179,22 +181,31 @@ pub fn evaluate(expr: &Expr, environment: Rc<RefCell<Environment>>, output: &mut
                 _ => Err(EvalError::TypeError("Operands must be compatible for the operation".to_string())),
             }
         },
-        Expr::Grouping(grouping) => evaluate(&**grouping, environment.clone(), output),
+        Expr::Grouping(grouping) => evaluate(&**grouping, environment.clone(), resolver, output),
         Expr::Variable(name) => {
-            match environment.borrow().get(&name) {
-                Ok(literal) => Ok(Expr::Literal(literal)),
-                Err(e) => Err(e),
+            if let Some(scope_depth) = resolver.resolve_local(&name.lexeme) {
+                // If we have a scope depth, fetch from the local environment
+                match environment.borrow().get_at_depth(&name, scope_depth) {
+                    Ok(literal) => Ok(Expr::Literal(literal)),
+                    Err(_) => Err(EvalError::UndefinedVariable(name.lexeme.clone())),
+                }
+            } else {
+                // Otherwise, fetch from the global environment
+                match environment.borrow().get(&name) {
+                    Ok(literal) => Ok(Expr::Literal(literal)),
+                    Err(_) => Err(EvalError::UndefinedVariable(name.lexeme.clone())),
+                }
             }
-        },
+        }
         Expr::Assign(name, expr) => {
-            let value = evaluate(&expr, environment.clone(), output)?;
+            let value = evaluate(&expr, environment.clone(), resolver, output)?;
             if let Expr::Literal(ref literal) = value {
                 environment.borrow_mut().assign(name, literal.clone())?;
             }
             Ok(value)
         },
         Expr::Logical(logical) => {
-            let left = evaluate(&logical.left, environment.clone(), output)?;
+            let left = evaluate(&logical.left, environment.clone(), resolver, output)?;
             if logical.operator.token_type == TokenType::Or {
                 if is_truthy(&left) {
                     return Ok(left);
@@ -204,14 +215,14 @@ pub fn evaluate(expr: &Expr, environment: Rc<RefCell<Environment>>, output: &mut
                     return Ok(left);
                 }
             }
-            evaluate(&logical.right, environment.clone(), output)
+            evaluate(&logical.right, environment.clone(), resolver, output)
         },
         Expr::Call(call_expr) => {
-            let callee = evaluate(&call_expr.callee, environment.clone(), output)?;
+            let callee = evaluate(&call_expr.callee, environment.clone(), resolver, output)?;
             let mut arguments = Vec::new();
         
             for arg in &call_expr.arguments {
-                let value = match evaluate(arg, environment.clone(), output)? {
+                let value = match evaluate(arg, environment.clone(), resolver, output)? {
                     Expr::Literal(literal) => literal,
                     _ => return Err(EvalError::TypeError("Invalid argument type".to_string())),
                 };
@@ -223,7 +234,7 @@ pub fn evaluate(expr: &Expr, environment: Rc<RefCell<Environment>>, output: &mut
                     if arguments.len() != callable.arity() {
                         return Err(EvalError::ArityError(callable.arity(), arguments.len()));
                     }
-                    callable.call(arguments, environment.clone(), output)
+                    callable.call(arguments, environment.clone(), resolver, output)
                 },
                 _ => Err(EvalError::TypeError("Can only call functions and classes".to_string())),
             }

@@ -3,6 +3,7 @@ use std::rc::Rc;
 use std::{env, string};
 use std::io::{self, Write};
 use rustylox::environ::Environment;
+use rustylox::resolver::Resolver;
 use rustylox::stmt::pretty_print_program;
 use rustylox::{run_interpret, read_file, run_tokenize, lexer::Lexer, parser, parser::Parser};
 use rustylox::interpreter;
@@ -59,11 +60,13 @@ fn main() {
                 let tokens = lexer.tokenize();
                 let mut parser = parser::Parser::new(tokens.to_vec());
                 let (statements, errors) = parser.parse();
+                let mut resolver = Resolver::new();
+                resolver.resolve(&statements);
 
                 let output = if !errors.is_empty() {
                     errors.into_iter().map(|e| e.to_string()).collect::<Vec<_>>().join("\n")
                 } else {
-                    match interpreter::interpret_with_env(&statements, Some(cli_environ.clone()), &mut string::String::new()) {
+                    match interpreter::interpret_with_env(&statements, Some(cli_environ.clone()), &resolver, &mut string::String::new()) {
                         Ok(output) => output,
                         Err(e) => e.to_string(),
                     }
