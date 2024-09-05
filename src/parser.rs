@@ -1,5 +1,5 @@
 use crate::token::{Token, TokenType};
-use crate::expr::{BinaryExpr, Expr, LiteralExpr, LogicalExpr, UnaryExpr};
+use crate::expr::{BinaryExpr, CallExpr, Expr, LiteralExpr, LogicalExpr, UnaryExpr};
 use crate::error::ParserError;
 use crate::stmt::Stmt;
 
@@ -43,14 +43,16 @@ impl Parser {
         }
     }
 
-    /// Attempt to parse a declaration, returning an error on failure.
     fn try_declaration(&mut self) -> Result<Stmt, ParserError> {
         if self.match_token(&[TokenType::Var]) {
             self.var_declaration()
+        } else if self.match_token(&[TokenType::Fun]) {
+            self.function_declaration()
         } else {
             self.statement()
         }
     }
+    
 
     /// Parse a single statement.
     fn statement(&mut self) -> Result<Stmt, ParserError> {
@@ -60,6 +62,10 @@ impl Parser {
             self.if_statement()
         } else if self.match_token(&[TokenType::Print]) {
             self.print_statement()
+        } else if self.match_token(&[TokenType::Return]) {
+            self.return_statement()
+        } else if self.match_token(&[TokenType::Fun]) {
+            self.function_declaration()
         } else if self.match_token(&[TokenType::While]) { 
             self.while_statement()
         } else if self.match_token(&[TokenType::LeftBrace]) {
@@ -143,6 +149,54 @@ impl Parser {
         self.consume(TokenType::Semicolon, "Expect ';' after value.")?;
         Ok(Stmt::Print(value))
     }
+
+    fn return_statement(&mut self) -> Result<Stmt, ParserError> {
+        let value = if !self.check(TokenType::Semicolon) {
+            Some(self.expression()?)
+        } else {
+            None
+        };
+    
+        self.consume(TokenType::Semicolon, "Expect ';' after return value.")?;
+        Ok(Stmt::Return(value))
+    }    
+
+    fn function_declaration(&mut self) -> Result<Stmt, ParserError> {
+        // Expect function name
+        let name_token = self.consume(TokenType::Identifier, "Expect function name.")?;
+        let name = name_token.lexeme.clone();
+    
+        // Parse the parameter list
+        self.consume(TokenType::LeftParen, "Expect '(' after function name.")?;
+        let mut parameters = Vec::new();
+    
+        if !self.check(TokenType::RightParen) {
+            loop {
+                if parameters.len() >= 255 {
+                    return Err(self.error(self.peek(), "Cannot have more than 255 parameters."));
+                }
+    
+                let param = self.consume(TokenType::Identifier, "Expect parameter name.")?;
+                parameters.push(param.lexeme.clone());
+    
+                if !self.match_token(&[TokenType::Comma]) {
+                    break;
+                }
+            }
+        }
+    
+        self.consume(TokenType::RightParen, "Expect ')' after parameters.")?;
+    
+        // Parse the function body
+        self.consume(TokenType::LeftBrace, "Expect '{' before function body.")?;
+        let body = self.block()?; // Parses the block of statements
+    
+        // Return the function statement
+        Ok(Stmt::Function(name, parameters, match body {
+            Stmt::Block(statements) => statements,
+            _ => vec![body],  // Should be a block, but safeguard just in case
+        }))
+    }   
 
     /// Parse a while statement.
     fn while_statement(&mut self) -> Result<Stmt, ParserError> {
@@ -376,7 +430,43 @@ impl Parser {
             return Ok(Expr::Unary(Box::new(UnaryExpr { operator, right })));
         }
 
-        self.primary()
+        self.call()
+    }
+
+    /// Parse function calls.
+    fn call(&mut self) -> Result<Expr, ParserError> {
+        let mut expr = self.primary()?;
+
+        loop {
+            if self.match_token(&[TokenType::LeftParen]) {
+                expr = self.finish_call(expr)?;
+            } else {
+                break;
+            }
+        }
+
+        Ok(expr)
+    }
+
+    /// Finish parsing a function call.
+    fn finish_call(&mut self, callee: Expr) -> Result<Expr, ParserError> {
+        let mut arguments = Vec::new();
+
+        if !self.check(TokenType::RightParen) {
+            loop {
+                if arguments.len() >= 255 {
+                    return Err(self.error(self.peek(), "Cannot have more than 255 arguments."));
+                }
+                arguments.push(self.expression()?);
+                if !self.match_token(&[TokenType::Comma]) {
+                    break;
+                }
+            }
+        }
+
+        let paren = self.consume(TokenType::RightParen, "Expect ')' after arguments.")?.clone();
+
+        Ok(Expr::Call(Box::new(CallExpr { callee, paren, arguments })))
     }
 
     /// Parse primary expressions, handling literals, grouping, etc.
