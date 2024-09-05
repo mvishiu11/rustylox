@@ -1,11 +1,12 @@
 use std::cell::RefCell;
 use std::rc::Rc;
-use std::env;
+use std::{env, string};
 use std::io::{self, Write};
 use rustylox::environ::Environment;
 use rustylox::stmt::pretty_print_program;
 use rustylox::{run_interpret, read_file, run_tokenize, lexer::Lexer, parser, parser::Parser};
 use rustylox::interpreter;
+use rustylox::natives::define_native_functions;
 
 const TOKENIZE: &str = "tokenize";
 const PARSE: &str = "parse";
@@ -45,6 +46,7 @@ fn main() {
 
             let mut input = String::new();
             let cli_environ = Rc::new(RefCell::new(Environment::new()));
+            define_native_functions(&mut cli_environ.borrow_mut());
             loop {
                 print!("> ");
                 io::stdout().flush().unwrap();
@@ -61,7 +63,7 @@ fn main() {
                 let output = if !errors.is_empty() {
                     errors.into_iter().map(|e| e.to_string()).collect::<Vec<_>>().join("\n")
                 } else {
-                    match interpreter::interpret_with_env(&statements, Some(cli_environ.clone())) {
+                    match interpreter::interpret_with_env(&statements, Some(cli_environ.clone()), &mut string::String::new()) {
                         Ok(output) => output,
                         Err(e) => e.to_string(),
                     }
