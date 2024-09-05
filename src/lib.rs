@@ -12,8 +12,8 @@ pub mod error;
 pub mod stmt;
 pub mod environ;
 pub mod interpreter;
-mod callable;
-mod natives;
+pub mod callable;
+pub mod natives;
 
 #[wasm_bindgen]
 pub fn tokenize(file_contents: &str) -> String {

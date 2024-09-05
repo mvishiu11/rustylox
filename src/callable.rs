@@ -29,7 +29,8 @@ pub trait LoxCallable {
     fn call(
         &self,
         arguments: Vec<LiteralExpr>, 
-        environment: Rc<RefCell<Environment>>
+        environment: Rc<RefCell<Environment>>,
+        output : &mut String
     ) -> Result<Expr, EvalError>;
 }
 
@@ -51,29 +52,31 @@ impl LoxCallable for LoxFunction {
     fn call(
         &self, 
         arguments: Vec<LiteralExpr>, 
-        _environment: Rc<RefCell<Environment>>
+        _environment: Rc<RefCell<Environment>>,
+        output: &mut String
     ) -> Result<Expr, EvalError> {
-        let mut new_env = Environment::new_enclosed(self.closure.clone());
+        let mut function_env = Environment::new_enclosed(self.closure.clone());
 
         // Bind the arguments to the parameters
         for (param, arg) in self.params.iter().zip(arguments) {
-            new_env.define(param.clone(), arg);
+            function_env.define(param.clone(), arg);
         }
 
-        // Execute the function body
-        let body_env = Rc::new(RefCell::new(new_env));
-        match interpret_with_env(&self.body, Some(body_env)) {
-            Ok(_) => Ok(Expr::Literal(LiteralExpr::Nil)),  // If no explicit return, return nil
-            Err(EvalError::ControlFlow(ControlFlow::Return(value))) => Ok(value),  // Handle return
+        // Execute the function body and pass the output buffer
+        let body_env = Rc::new(RefCell::new(function_env));
+        match interpret_with_env(&self.body, Some(body_env), output) {
+            Ok(_) => Ok(Expr::Literal(LiteralExpr::Nil)),
+            Err(EvalError::ControlFlow(ControlFlow::Return(value))) => Ok(value),
             Err(e) => Err(e),
         }
     }
 }
 
+
 pub struct NativeFunction {
     name: String,
     arity: usize,
-    function: fn(Vec<LiteralExpr>) -> Result<LiteralExpr, EvalError>,  // Native function signature
+    function: fn(Vec<LiteralExpr>) -> Result<LiteralExpr, EvalError>,
 }
 
 impl NativeFunction {
@@ -98,7 +101,8 @@ impl LoxCallable for NativeFunction {
     fn call(
         &self, 
         arguments: Vec<LiteralExpr>, 
-        _environment: Rc<RefCell<Environment>>
+        _environment: Rc<RefCell<Environment>>,
+        _output : &mut String
     ) -> Result<Expr, EvalError> {
         let result = (self.function)(arguments)?;
         Ok(Expr::Literal(result))
