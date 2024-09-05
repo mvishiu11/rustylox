@@ -1,13 +1,13 @@
 use std::fmt;
 
-/// Represents a parsing error with a message and the line number where it occurred.
+use crate::expr::Expr;
+
 #[derive(Debug, Clone)]
 pub struct ParserError {
     pub line: usize,
     pub message: String,
 }
 
-/// Represents a runtime error with a message and the line number where it occurred.
 #[derive(Debug, Clone)]
 pub struct RuntimeError {
     pub message: String,
@@ -18,16 +18,15 @@ pub struct RuntimeError {
 pub enum ControlFlow {
     Break,
     Continue,
+    Return(Expr),
 }
 
 impl ParserError {
-    /// Create a new ParserError.
     pub fn new(line: usize, message: String) -> Self {
         ParserError { line, message }
     }
 }
 
-// Define the evaluator errors
 #[derive(Debug)]
 #[allow(dead_code)]
 pub enum EvalError {
@@ -36,6 +35,7 @@ pub enum EvalError {
     TypeError(String),
     SyntaxError(String),
     ControlFlow(ControlFlow),
+    ArityError(usize, usize),
 }
 
 impl fmt::Display for EvalError {
