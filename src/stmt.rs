@@ -11,6 +11,8 @@ pub enum Stmt {
     While(Expr, Box<Stmt>),
     Break,
     Continue,
+    Function(String, Vec<String>, Vec<Stmt>),
+    Return(Option<Expr>),
 }
 
 pub fn pretty_print_program(program: (Vec<Stmt>, Vec<ParserError>)) -> String {
@@ -44,7 +46,7 @@ impl Stmt {
         self.pretty_print_with_indent(0)
     }
 
-    fn pretty_print_with_indent(&self, indent: usize) -> String {
+    pub fn pretty_print_with_indent(&self, indent: usize) -> String {
         let indentation = " ".repeat(indent * 2);
         match self {
             Stmt::Expression(expr) => format!(
@@ -110,6 +112,35 @@ impl Stmt {
                 indentation,
                 body.pretty_print_with_indent(indent + 1)
             ),
+            Stmt::Function(name, params, body) => {
+                let mut result = format!(
+                    "{}Function ({})\n{}├── Parameters: {}",
+                    indentation,
+                    name,
+                    indentation,
+                    params.join(", ")
+                );
+                for statement in body {
+                    result.push_str(&format!(
+                        "\n{}├── {}",
+                        indentation,
+                        statement.pretty_print_with_indent(indent + 1)
+                    ));
+                }
+                result
+            }
+            Stmt::Return(expr) => {
+                let expr_str = if let Some(expr) = expr {
+                    expr.pretty_print_with_indent(indent + 1)
+                } else {
+                    format!("{}None", indentation)
+                };
+                format!(
+                    "Return\n{}└── {}",
+                    indentation,
+                    expr_str
+                )
+            }
             Stmt::Break => format!("{}Break", indentation),
             Stmt::Continue => format!("{}Continue", indentation),
         }
