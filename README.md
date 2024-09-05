@@ -35,18 +35,28 @@ As of 03/09/2024 Rustylox supports a [live playground](https://mvishiu11.github.
 program      = { declaration }, EOF ;
 
 declaration  = varDecl 
+             | funDecl
              | statement ;
+
+funDecl      = "fun", function ;
+
+function     = IDENTIFIER, "(", [ parameters ], ")", block ;
+
+parameters   = IDENTIFIER, { ",", IDENTIFIER } ;
 
 varDecl      = "var", IDENTIFIER, [ "=" expression ], ";" ;
 
 statement    = exprStmt 
-             | printStmt 
-             | whileStmt
              | forStmt
              | ifStmt
+             | printStmt 
+             | returnStmt
+             | whileStmt
              | block 
              | breakStmt
              | continueStmt ;
+
+returnStmt   = "return", [ expression ], ";" ;
 
 breakStmt    = "break", ";" ;
 
