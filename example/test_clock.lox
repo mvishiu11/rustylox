@@ -1,0 +1,7 @@
+var start = clock();
+
+print start;
+
+var end = clock();
+
+print end - start;
